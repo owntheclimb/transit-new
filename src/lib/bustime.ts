@@ -1,5 +1,9 @@
 // MTA Bus Time API Client
-// Documentation: https://bustime.mta.info/wiki/Developers/Index
+// NOTE: Mount Vernon is in Westchester County and uses Bee-Line buses
+// The MTA Bus Time API only covers NYC buses
+// To get real bus data, you need:
+// 1. A valid MTA Bus Time API key (different from Metro-North key)
+// 2. OR use Westchester Bee-Line data if available
 
 const API_KEY = process.env.MTA_BUS_API_KEY || "";
 const BASE_URL = "https://bustime.mta.info";
@@ -29,8 +33,11 @@ export interface NearbyStopsResponse {
   stops: BusStop[];
 }
 
-export interface StopMonitoringResponse {
-  arrivals: BusArrival[];
+// Check if we're in the NYC bus service area
+function isInNYCServiceArea(lat: number, lon: number): boolean {
+  // Approximate NYC bus service area
+  // Mount Vernon is in Westchester County, outside this area
+  return lat >= 40.5 && lat <= 40.92 && lon >= -74.26 && lon <= -73.7;
 }
 
 // Find bus stops near a location
@@ -39,12 +46,18 @@ export async function getNearbyStops(
   lon: number,
   radius: number = 0.005
 ): Promise<BusStop[]> {
+  // Mount Vernon uses Bee-Line buses (Westchester County), not MTA NYC buses
+  if (!isInNYCServiceArea(lat, lon)) {
+    console.log("Location is outside NYC bus service area (likely Westchester)");
+    return [];
+  }
+
   try {
     const url = `${BASE_URL}/api/where/stops-for-location.json?lat=${lat}&lon=${lon}&latSpan=${radius}&lonSpan=${radius}&key=${API_KEY}`;
     
     const response = await fetch(url, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 3600 }, // Cache for 1 hour
+      next: { revalidate: 3600 },
     });
 
     if (!response.ok) {
@@ -53,7 +66,7 @@ export async function getNearbyStops(
 
     const data = await response.json();
     
-    if (!data.data?.list) {
+    if (!data?.data?.list) {
       return [];
     }
 
@@ -79,7 +92,7 @@ export async function getStopArrivals(stopId: string): Promise<BusArrival[]> {
     
     const response = await fetch(url, {
       headers: { Accept: "application/json" },
-      cache: "no-store", // Always fetch fresh data
+      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -87,6 +100,13 @@ export async function getStopArrivals(stopId: string): Promise<BusArrival[]> {
     }
 
     const data = await response.json();
+    
+    // Check for API key errors
+    const error = data.Siri?.ServiceDelivery?.VehicleMonitoringDelivery?.[0]?.ErrorCondition;
+    if (error) {
+      console.error("Bus API error:", error.Description);
+      return [];
+    }
     
     const visits =
       data.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0]?.MonitoredStopVisit || [];
@@ -131,7 +151,6 @@ export async function getMultipleStopArrivals(
 ): Promise<Map<string, BusArrival[]>> {
   const results = new Map<string, BusArrival[]>();
   
-  // Fetch in parallel, but limit concurrency
   const promises = stopIds.slice(0, 5).map(async (stopId) => {
     const arrivals = await getStopArrivals(stopId);
     results.set(stopId, arrivals);
@@ -140,4 +159,3 @@ export async function getMultipleStopArrivals(
   await Promise.all(promises);
   return results;
 }
-

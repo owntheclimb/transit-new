@@ -80,9 +80,9 @@ export default function BusBoard({ initialStops = [] }: BusBoardProps) {
           </div>
           <div>
             <h2 className="text-2xl font-semibold text-transit-text">
-              Bus Arrivals
+              Bee-Line Bus
             </h2>
-            <p className="text-sm text-transit-muted">Nearby Stops</p>
+            <p className="text-sm text-transit-muted">Westchester County</p>
           </div>
         </div>
         {lastUpdated && (
