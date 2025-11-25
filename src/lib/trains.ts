@@ -31,7 +31,7 @@ function parseGtfsRtFeed(buffer: ArrayBuffer): any[] {
     const text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
     
     // Extract trip IDs and status from the binary/text data
-    const tripMatches = text.matchAll(/(\d{3,4})[^\x00-\x1F]*?(On-Time|Late|Departed|Early)/g);
+    const tripMatches = Array.from(text.matchAll(/(\d{3,4})[^\x00-\x1F]*?(On-Time|Late|Departed|Early)/g));
     
     for (const match of tripMatches) {
       entities.push({
