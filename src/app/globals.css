@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --font-outfit: 'Outfit', system-ui, sans-serif;
+  --font-space-mono: 'Space Mono', monospace;
+}
+
+html {
+  font-family: var(--font-outfit);
+}
+
+body {
+  background: #0a0e14;
+  color: #e6edf3;
+  overflow: hidden;
+}
+
+/* Custom scrollbar for notices panel */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #131920;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #1e2732;
+  border-radius: 2px;
+}
+
+/* Glowing accent effect */
+.glow-accent {
+  box-shadow: 0 0 20px rgba(0, 212, 170, 0.15);
+}
+
+/* Train row hover effect */
+.train-row {
+  transition: all 0.2s ease;
+}
+
+.train-row:hover {
+  background: rgba(30, 39, 50, 0.5);
+}
+
+/* Status indicators */
+.status-ontime {
+  color: #00d4aa;
+}
+
+.status-delayed {
+  color: #ff6b6b;
+  animation: pulse 2s infinite;
+}
+
+/* Panel styling */
+.panel {
+  background: linear-gradient(180deg, #131920 0%, #0f1419 100%);
+  border: 1px solid #1e2732;
+  border-radius: 12px;
+}
+
+/* Large clock display */
+.clock-display {
+  font-family: var(--font-space-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}
+
+/* Marquee for notices */
+.marquee-container {
+  mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+}
+
