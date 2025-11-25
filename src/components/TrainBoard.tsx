@@ -7,29 +7,28 @@ export default function TrainBoard() {
   const [departures, setDepartures] = useState<TrainDeparture[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchDepartures = async () => {
-    try {
-      const response = await fetch("/api/trains");
-      if (response.ok) {
-        const data = await response.json();
-        setDepartures(data.departures || []);
-      }
-    } catch (error) {
-      console.error("Error fetching trains:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchDepartures = async () => {
+      try {
+        const response = await fetch("/api/trains");
+        if (response.ok) {
+          const data = await response.json();
+          setDepartures(data.departures || []);
+        }
+      } catch (error) {
+        console.error("Error fetching trains:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchDepartures();
     const interval = setInterval(fetchDepartures, 60000);
     return () => clearInterval(interval);
   }, []);
 
   const formatTime = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString("en-US", {
+    return new Date(isoString).toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
@@ -37,33 +36,24 @@ export default function TrainBoard() {
   };
 
   const getMinutesUntil = (isoString: string) => {
-    const now = new Date();
-    const departure = new Date(isoString);
-    const diff = Math.round((departure.getTime() - now.getTime()) / 60000);
+    const diff = Math.round((new Date(isoString).getTime() - Date.now()) / 60000);
     return Math.max(0, diff);
   };
 
   return (
-    <div className="elegant-panel h-full flex flex-col">
+    <div className="clean-panel h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-5 border-b border-white/5">
+      <div className="px-5 py-4 border-b border-white/5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="section-title text-2xl text-stone-200">
-              Metro-North Railroad
-            </h2>
-            <p className="text-sm text-stone-500 mt-1">
-              Departures from Mount Vernon West
-            </p>
-          </div>
-          <div className="text-xs text-stone-600 uppercase tracking-wider">
-            Hudson Line
+            <h2 className="text-xl font-semibold text-white">Metro-North</h2>
+            <p className="text-xs text-white/40 mt-0.5">Mount Vernon West · Hudson Line</p>
           </div>
         </div>
       </div>
 
       {/* Table Header */}
-      <div className="grid grid-cols-12 gap-4 px-6 py-3 text-xs font-medium text-stone-500 uppercase tracking-wider border-b border-white/5">
+      <div className="grid grid-cols-12 gap-3 px-5 py-2.5 border-b border-white/5 table-header">
         <div className="col-span-1">Train</div>
         <div className="col-span-4">Destination</div>
         <div className="col-span-2 text-center">Departs</div>
@@ -72,76 +62,52 @@ export default function TrainBoard() {
         <div className="col-span-2 text-right">Status</div>
       </div>
 
-      {/* Departures List */}
-      <div className="flex-1 overflow-hidden">
+      {/* Departures */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
         {loading && departures.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-stone-500">
-            Loading departures...
+          <div className="flex items-center justify-center h-32 text-white/40">
+            Loading...
           </div>
         ) : departures.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-stone-500">
+          <div className="flex items-center justify-center h-32 text-white/40">
             No upcoming departures
           </div>
         ) : (
-          departures.slice(0, 6).map((departure, index) => {
-            const minutes = getMinutesUntil(departure.departureTime);
-            const isImminent = minutes <= 5;
-            const isFeatured = index === 0;
+          departures.slice(0, 6).map((dep, i) => {
+            const mins = getMinutesUntil(dep.departureTime);
+            const isNext = i === 0;
+            const isUrgent = mins <= 5;
 
             return (
               <div
-                key={departure.id}
-                className={`departure-row grid grid-cols-12 gap-4 items-center animate-fade-in ${
-                  isFeatured ? "featured" : ""
-                }`}
-                style={{ animationDelay: `${index * 0.05}s` }}
+                key={dep.id}
+                className={`departure-row grid grid-cols-12 gap-3 items-center ${isNext ? "next-departure" : ""}`}
               >
-                {/* Train Number */}
                 <div className="col-span-1">
-                  <span className="route-badge route-badge-train">
-                    {departure.trainNumber}
-                  </span>
+                  <span className="train-badge">{dep.trainNumber}</span>
                 </div>
-
-                {/* Destination */}
-                <div className="col-span-4">
-                  <div className="text-stone-200 font-medium">
-                    {departure.destination}
-                  </div>
+                <div className="col-span-4 text-white font-medium truncate">
+                  {dep.destination}
                 </div>
-
-                {/* Departure Time */}
-                <div className="col-span-2 text-center text-stone-400">
-                  {formatTime(departure.departureTime)}
+                <div className="col-span-2 text-center text-white/60 tabular-nums">
+                  {formatTime(dep.departureTime)}
                 </div>
-
-                {/* Minutes */}
                 <div className="col-span-2 text-center">
-                  <span className={`minutes-display text-xl ${
-                    isImminent ? "minutes-imminent" : "text-stone-200"
-                  }`}>
-                    {minutes}
+                  <span className={`text-2xl font-bold tabular-nums ${isUrgent ? "minutes-urgent" : "text-white"}`}>
+                    {mins}
                   </span>
-                  <span className="text-xs text-stone-500 ml-1">min</span>
+                  <span className="text-xs text-white/40 ml-1">min</span>
                 </div>
-
-                {/* Track */}
-                <div className="col-span-1 text-center">
-                  <span className="text-stone-300 font-medium">
-                    {departure.track || "—"}
-                  </span>
+                <div className="col-span-1 text-center text-white font-semibold">
+                  {dep.track || "—"}
                 </div>
-
-                {/* Status */}
                 <div className="col-span-2 text-right">
-                  {departure.status === "on-time" ? (
-                    <span className="text-sm status-ontime">On Time</span>
-                  ) : departure.status === "delayed" ? (
-                    <span className="text-sm status-delayed">
-                      +{departure.delayMinutes} min
-                    </span>
+                  {dep.status === "on-time" ? (
+                    <span className="text-sm font-medium status-on-time">On Time</span>
+                  ) : dep.status === "delayed" ? (
+                    <span className="text-sm font-medium status-delayed">+{dep.delayMinutes}m Late</span>
                   ) : (
-                    <span className="text-sm text-stone-500">—</span>
+                    <span className="text-sm text-white/40">—</span>
                   )}
                 </div>
               </div>

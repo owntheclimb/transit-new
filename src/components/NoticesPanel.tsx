@@ -7,19 +7,19 @@ export default function NoticesPanel() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const fetchNotices = async () => {
-    try {
-      const response = await fetch("/api/notices");
-      if (response.ok) {
-        const data = await response.json();
-        setNotices(data.notices || []);
-      }
-    } catch (error) {
-      console.error("Error fetching notices:", error);
-    }
-  };
-
   useEffect(() => {
+    const fetchNotices = async () => {
+      try {
+        const response = await fetch("/api/notices");
+        if (response.ok) {
+          const data = await response.json();
+          setNotices(data.notices || []);
+        }
+      } catch (error) {
+        console.error("Error fetching notices:", error);
+      }
+    };
+
     fetchNotices();
     const interval = setInterval(fetchNotices, 300000);
     return () => clearInterval(interval);
@@ -43,43 +43,34 @@ export default function NoticesPanel() {
 
   if (notices.length === 0) {
     return (
-      <div className="elegant-panel h-full flex items-center justify-center">
-        <p className="text-stone-600 text-sm">No active notices</p>
+      <div className="clean-panel h-full flex items-center justify-center">
+        <p className="text-white/30 text-sm">No notices</p>
       </div>
     );
   }
 
-  const currentNotice = notices[currentIndex];
+  const notice = notices[currentIndex];
 
   return (
-    <div className="elegant-panel h-full flex flex-col">
-      {/* Header */}
-      <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
-        <span className="text-xs text-stone-500 uppercase tracking-wider">
-          Building Notice
-        </span>
+    <div className="clean-panel h-full flex flex-col overflow-hidden">
+      <div className="px-4 py-2 border-b border-white/5 flex items-center justify-between">
+        <span className="text-xs text-white/40 uppercase tracking-wider font-medium">Notice</span>
         {notices.length > 1 && (
           <div className="flex gap-1">
             {notices.map((_, i) => (
               <div
                 key={i}
-                className={`w-1 h-1 rounded-full transition-all ${
-                  i === currentIndex ? "bg-stone-400 w-3" : "bg-stone-700"
+                className={`h-1 rounded-full transition-all ${
+                  i === currentIndex ? "w-4 bg-white/50" : "w-1 bg-white/20"
                 }`}
               />
             ))}
           </div>
         )}
       </div>
-
-      {/* Notice Content */}
-      <div className={`flex-1 px-5 py-4 ${getPriorityClass(currentNotice.priority)}`}>
-        <h4 className="text-sm font-medium text-stone-200 mb-1">
-          {currentNotice.title}
-        </h4>
-        <p className="text-xs text-stone-400 leading-relaxed">
-          {currentNotice.content}
-        </p>
+      <div className={`flex-1 px-4 py-3 ${getPriorityClass(notice.priority)}`}>
+        <h4 className="text-sm font-semibold text-white mb-1">{notice.title}</h4>
+        <p className="text-xs text-white/60 leading-relaxed">{notice.content}</p>
       </div>
     </div>
   );

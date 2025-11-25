@@ -11,7 +11,6 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Form state
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [priority, setPriority] = useState<Notice["priority"]>("low");
@@ -29,9 +28,7 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchNotices();
-    }
+    if (isAuthenticated) fetchNotices();
   }, [isAuthenticated]);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -40,7 +37,7 @@ export default function AdminPage() {
       setIsAuthenticated(true);
       setError("");
     } else {
-      setError("Password must be at least 4 characters");
+      setError("Password required");
     }
   };
 
@@ -54,236 +51,125 @@ export default function AdminPage() {
       const response = await fetch("/api/notices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          password,
-          title,
-          content,
-          priority,
-        }),
+        body: JSON.stringify({ password, title, content, priority }),
       });
 
       const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed");
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create notice");
-      }
-
-      // Reset form
       setTitle("");
       setContent("");
       setPriority("low");
-      setSuccess("Notice created successfully!");
-      
-      // Refresh notices
+      setSuccess("Notice created!");
       fetchNotices();
-      
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : "Error");
     } finally {
       setLoading(false);
     }
   };
 
-  const getPriorityBadge = (p: Notice["priority"]) => {
-    const colors = {
-      high: "bg-red-500/10 text-red-400 border-red-500/20",
-      medium: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-      low: "bg-stone-500/10 text-stone-400 border-stone-500/20",
-    };
-    return colors[p];
-  };
-
   if (!isAuthenticated) {
     return (
-      <main className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-6">
-        <div className="w-full max-w-sm">
-          <div className="elegant-panel p-8">
-            <div className="text-center mb-8">
-              <h1 className="section-title text-2xl text-stone-200 mb-2">
-                Admin Login
-              </h1>
-              <p className="text-sm text-stone-500">
-                22 Southwest Street
-              </p>
-            </div>
-
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs text-stone-500 uppercase tracking-wider mb-2">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-black/30 border border-stone-800 rounded text-stone-200 focus:outline-none focus:border-stone-600 transition-colors"
-                  placeholder="Enter password"
-                  required
-                />
-              </div>
-
-              {error && (
-                <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded p-3">
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="w-full py-3 bg-stone-200 text-stone-900 font-medium rounded hover:bg-stone-300 transition-colors"
-              >
-                Login
-              </button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <a href="/" className="text-stone-500 hover:text-stone-300 text-sm transition-colors">
-                ← Back to Display
-              </a>
-            </div>
-          </div>
+      <main className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
+        <div className="w-full max-w-sm clean-panel p-8">
+          <h1 className="text-2xl font-bold text-white text-center mb-6">Admin Login</h1>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/30"
+              placeholder="Password"
+              required
+            />
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+            <button className="w-full py-3 bg-white text-black font-semibold rounded-lg hover:bg-white/90">
+              Login
+            </button>
+          </form>
+          <a href="/" className="block text-center text-white/40 text-sm mt-6 hover:text-white/60">
+            ← Back
+          </a>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#0f0f0f] overflow-y-auto">
-      <div className="max-w-5xl mx-auto p-8 pb-16">
-        {/* Header */}
+    <main className="min-h-screen bg-[#0a0a0f] overflow-y-auto">
+      <div className="max-w-5xl mx-auto p-6 pb-12">
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="section-title text-3xl text-stone-200">
-              Admin Panel
-            </h1>
-            <p className="text-sm text-stone-500 mt-1">
-              Manage building notices
-            </p>
-          </div>
-
+          <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
           <div className="flex gap-3">
-            <a
-              href="/"
-              target="_blank"
-              className="px-4 py-2 border border-stone-800 rounded text-stone-400 hover:text-stone-200 hover:border-stone-600 transition-colors text-sm"
-            >
+            <a href="/" target="_blank" className="px-4 py-2 border border-white/10 rounded-lg text-white/60 hover:text-white text-sm">
               View Display
             </a>
-            <button
-              onClick={() => setIsAuthenticated(false)}
-              className="px-4 py-2 border border-stone-800 rounded text-stone-500 hover:text-stone-300 transition-colors text-sm"
-            >
+            <button onClick={() => setIsAuthenticated(false)} className="px-4 py-2 border border-white/10 rounded-lg text-white/40 hover:text-white/60 text-sm">
               Logout
             </button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Create Notice Form */}
-          <div className="elegant-panel p-6">
-            <h2 className="text-lg font-medium text-stone-200 mb-6">
-              Create New Notice
-            </h2>
-
+          {/* Create Form */}
+          <div className="clean-panel p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">New Notice</h2>
             <form onSubmit={handleCreateNotice} className="space-y-4">
-              <div>
-                <label className="block text-xs text-stone-500 uppercase tracking-wider mb-2">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-3 bg-black/30 border border-stone-800 rounded text-stone-200 focus:outline-none focus:border-stone-600 transition-colors"
-                  placeholder="Notice title"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-stone-500 uppercase tracking-wider mb-2">
-                  Content
-                </label>
-                <textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="w-full px-4 py-3 bg-black/30 border border-stone-800 rounded text-stone-200 focus:outline-none focus:border-stone-600 transition-colors resize-none"
-                  placeholder="Notice content"
-                  rows={4}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-stone-500 uppercase tracking-wider mb-2">
-                  Priority
-                </label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as Notice["priority"])}
-                  className="w-full px-4 py-3 bg-black/30 border border-stone-800 rounded text-stone-200 focus:outline-none focus:border-stone-600 transition-colors"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-
-              {error && (
-                <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded p-3">
-                  {error}
-                </div>
-              )}
-
-              {success && (
-                <div className="text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded p-3">
-                  {success}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-stone-200 text-stone-900 font-medium rounded hover:bg-stone-300 transition-colors disabled:opacity-50"
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/30"
+                placeholder="Title"
+                required
+              />
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-white/30 resize-none"
+                placeholder="Content"
+                rows={3}
+                required
+              />
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as Notice["priority"])}
+                className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white focus:outline-none focus:border-white/30"
               >
+                <option value="low">Low Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="high">High Priority</option>
+              </select>
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+              {success && <p className="text-green-400 text-sm">{success}</p>}
+              <button disabled={loading} className="w-full py-3 bg-white text-black font-semibold rounded-lg hover:bg-white/90 disabled:opacity-50">
                 {loading ? "Creating..." : "Create Notice"}
               </button>
             </form>
           </div>
 
-          {/* Existing Notices */}
-          <div className="elegant-panel p-6">
-            <h2 className="text-lg font-medium text-stone-200 mb-6">
-              Active Notices ({notices.length})
-            </h2>
-
-            <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
+          {/* Notices List */}
+          <div className="clean-panel p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Active Notices ({notices.length})</h2>
+            <div className="space-y-3 max-h-[350px] overflow-y-auto custom-scrollbar">
               {notices.length === 0 ? (
-                <div className="text-center text-stone-500 py-8">
-                  No notices yet
-                </div>
+                <p className="text-white/40 text-center py-8">No notices</p>
               ) : (
-                notices.map((notice) => (
-                  <div
-                    key={notice.id}
-                    className="bg-black/20 border border-stone-800 rounded p-4"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-medium text-stone-200 truncate">
-                            {notice.title}
-                          </h3>
-                          <span className={`px-2 py-0.5 text-xs font-medium rounded border ${getPriorityBadge(notice.priority)}`}>
-                            {notice.priority}
-                          </span>
-                        </div>
-                        <p className="text-sm text-stone-400 line-clamp-2">
-                          {notice.content}
-                        </p>
-                      </div>
+                notices.map((n) => (
+                  <div key={n.id} className="p-4 bg-black/30 border border-white/5 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-white">{n.title}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded ${
+                        n.priority === "high" ? "bg-red-500/20 text-red-400" :
+                        n.priority === "medium" ? "bg-yellow-500/20 text-yellow-400" :
+                        "bg-green-500/20 text-green-400"
+                      }`}>
+                        {n.priority}
+                      </span>
                     </div>
+                    <p className="text-sm text-white/50">{n.content}</p>
                   </div>
                 ))
               )}
@@ -291,35 +177,22 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Setup Instructions */}
-        <div className="elegant-panel p-6 mt-6">
-          <h2 className="text-lg font-medium text-stone-200 mb-4">
-            Setup Instructions
-          </h2>
-          <div className="text-sm text-stone-400 space-y-4">
-            <p>
-              Currently running with demo notices. To enable persistent notices with a database:
-            </p>
-            <ol className="list-decimal list-inside space-y-2 text-stone-500">
-              <li>Create a free account at <a href="https://supabase.com" target="_blank" className="text-stone-300 hover:underline">supabase.com</a></li>
-              <li>Create a new project</li>
-              <li>Run this SQL in the SQL Editor:</li>
-            </ol>
-            <pre className="bg-black/40 p-4 rounded text-xs overflow-x-auto text-stone-400">
+        {/* Instructions */}
+        <div className="clean-panel p-6 mt-6">
+          <h2 className="text-lg font-semibold text-white mb-3">Setup</h2>
+          <p className="text-sm text-white/50 mb-3">
+            Notices are stored in memory. For persistent storage, connect Supabase:
+          </p>
+          <pre className="bg-black/40 p-4 rounded-lg text-xs text-white/40 overflow-x-auto">
 {`CREATE TABLE notices (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   priority TEXT DEFAULT 'low',
   active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  expires_at TIMESTAMPTZ
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );`}
-            </pre>
-            <p className="text-stone-500">
-              Then add your Supabase URL and anon key to the Vercel environment variables.
-            </p>
-          </div>
+          </pre>
         </div>
       </div>
     </main>
