@@ -36,14 +36,14 @@ export default function Clock() {
 
   return (
     <div className="text-right">
-      <div className="flex items-baseline gap-2">
+      <div className="flex items-baseline gap-1.5">
         <span className="clock-time text-5xl font-semibold tracking-tight">
           {hour12}:{minutes}
         </span>
-        <span className="text-xl text-slate-500 font-mono">{seconds}</span>
+        <span className="text-lg text-slate-400 font-mono font-medium">{seconds}</span>
         <span className="text-lg font-semibold text-teal-400 ml-1">{ampm}</span>
       </div>
-      <div className="text-sm text-slate-500 font-medium mt-1">
+      <div className="text-base text-slate-400 font-medium mt-1">
         {dateStr}
       </div>
     </div>

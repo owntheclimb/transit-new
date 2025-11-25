@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default function TransitDisplay() {
   return (
-    <main className="h-screen w-screen bg-[#05080d] p-8 overflow-hidden relative">
+    <main className="h-screen w-screen bg-[#05080d] p-6 lg:p-8 overflow-hidden relative">
       {/* Ambient background glows */}
       <div className="ambient-glow glow-teal w-[600px] h-[600px] -top-40 -left-40" />
       <div className="ambient-glow glow-blue w-[500px] h-[500px] top-1/2 -right-40" />
@@ -22,9 +22,9 @@ export default function TransitDisplay() {
       />
 
       {/* Main content */}
-      <div className="relative z-10 h-full flex flex-col gap-6">
+      <div className="relative z-10 h-full flex flex-col gap-5">
         {/* Header */}
-        <header className="flex items-center justify-between">
+        <header className="flex items-center justify-between py-1">
           <div className="flex items-center gap-5">
             {/* Logo / Building identity */}
             <div className="relative">
@@ -40,7 +40,7 @@ export default function TransitDisplay() {
               <h1 className="text-3xl font-bold text-white tracking-tight">
                 Southwest Street
               </h1>
-              <p className="text-sm text-slate-400 font-medium">
+              <p className="text-base text-slate-400 font-medium mt-0.5">
                 Mount Vernon, NY • Transit Hub
               </p>
             </div>
@@ -49,45 +49,45 @@ export default function TransitDisplay() {
           <div className="flex items-center gap-6">
             <div className="live-indicator">
               <div className="live-dot" />
-              Live
+              <span className="text-sm">Live</span>
             </div>
             <Clock />
           </div>
         </header>
 
         {/* Main Content Grid */}
-        <div className="flex-1 grid grid-cols-12 gap-6 min-h-0">
+        <div className="flex-1 grid grid-cols-12 gap-5 min-h-0">
           {/* Train Board - Main Panel */}
           <div className="col-span-7 min-h-0">
             <TrainBoard />
           </div>
 
           {/* Right Side - Bus Board and Notices */}
-          <div className="col-span-5 flex flex-col gap-6 min-h-0">
+          <div className="col-span-5 flex flex-col gap-5 min-h-0">
             {/* Bus Board */}
             <div className="flex-1 min-h-0">
               <BusBoard />
             </div>
 
             {/* Notices Panel */}
-            <div className="h-44">
+            <div className="h-40">
               <NoticesPanel />
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <footer className="flex items-center justify-between text-xs text-slate-500">
+        <footer className="flex items-center justify-between text-sm text-slate-400 py-2">
           <div className="flex items-center gap-4">
-            <span className="text-slate-600">MTA Metro-North</span>
-            <span className="text-slate-700">•</span>
-            <span className="text-slate-600">Westchester Bee-Line</span>
+            <span className="text-slate-400 font-medium">MTA Metro-North</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-slate-400 font-medium">Westchester Bee-Line</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span>Auto-refresh 60s</span>
-            <span className="text-slate-700">•</span>
-            <a href="/admin" className="text-slate-500 hover:text-teal-400 transition-colors">
-              Admin
+          <div className="flex items-center gap-3">
+            <span className="text-slate-400">Auto-refresh every 60s</span>
+            <span className="text-slate-600">•</span>
+            <a href="/admin" className="text-teal-400 hover:text-teal-300 transition-colors font-medium">
+              Admin Panel
             </a>
           </div>
         </footer>
