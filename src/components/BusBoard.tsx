@@ -1,19 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { BusArrival, BusStop } from "@/lib/bustime";
-
-interface BusBoardProps {
-  initialStops?: BusStop[];
-  initialArrivals?: Map<string, BusArrival[]>;
-}
+import type { BusArrival } from "@/lib/bustime";
 
 interface CombinedArrival extends BusArrival {
   stopName: string;
   stopId: string;
 }
 
-export default function BusBoard({ initialStops = [] }: BusBoardProps) {
+export default function BusBoard() {
   const [arrivals, setArrivals] = useState<CombinedArrival[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -35,146 +30,119 @@ export default function BusBoard({ initialStops = [] }: BusBoardProps) {
 
   useEffect(() => {
     fetchArrivals();
-    const interval = setInterval(fetchArrivals, 60000); // Refresh every 60 seconds
+    const interval = setInterval(fetchArrivals, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  const getStatusColor = (status: BusArrival["status"]) => {
-    switch (status) {
-      case "approaching":
-        return "text-transit-warning";
-      case "at-stop":
-        return "text-transit-accent";
-      default:
-        return "text-transit-text";
-    }
-  };
-
-  const getStatusText = (arrival: BusArrival) => {
+  const getStatusText = (arrival: CombinedArrival) => {
     if (arrival.status === "at-stop") return "At Stop";
-    if (arrival.status === "approaching") return "Approaching";
-    if (arrival.stops === 1) return "1 stop away";
-    if (arrival.stops > 1) return `${arrival.stops} stops away`;
+    if (arrival.status === "approaching") return "Arriving";
+    if (arrival.stops === 1) return "1 stop";
+    if (arrival.stops > 1) return `${arrival.stops} stops`;
     return "";
   };
 
   return (
-    <div className="panel p-6 h-full flex flex-col">
+    <div className="glass-panel p-6 h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-            <svg
-              className="w-6 h-6 text-blue-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7h8m-8 4h8m-8 4h4m-4 4h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-2xl font-semibold text-transit-text">
-              Bee-Line Bus
-            </h2>
-            <p className="text-sm text-transit-muted">Westchester County</p>
-          </div>
+      <div className="section-header">
+        <div className="section-icon section-icon-blue">
+          <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m-8 4h8m-8 4h4m-4 4h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <div className="flex-1">
+          <h2 className="text-xl font-bold text-white">Bee-Line Bus</h2>
+          <p className="text-sm text-slate-400">Westchester County Transit</p>
         </div>
         {lastUpdated && (
-          <div className="text-xs text-transit-muted">
-            Updated {lastUpdated.toLocaleTimeString()}
-          </div>
+          <span className="text-xs text-slate-500 font-mono">
+            {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
         )}
       </div>
 
       {/* Table Header */}
-      <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-transit-border/30 rounded-lg mb-2 text-sm font-medium text-transit-muted uppercase tracking-wider">
+      <div className="grid grid-cols-12 gap-3 px-4 py-2 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-white/5">
         <div className="col-span-2">Route</div>
-        <div className="col-span-4">Destination</div>
-        <div className="col-span-2 text-center">Minutes</div>
-        <div className="col-span-4 text-right">Status</div>
+        <div className="col-span-5">To</div>
+        <div className="col-span-2 text-center">Time</div>
+        <div className="col-span-3 text-right">Info</div>
       </div>
 
       {/* Arrivals List */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden space-y-1">
         {loading && arrivals.length === 0 ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-pulse text-transit-muted">
-              Loading bus arrivals...
+          <div className="flex items-center justify-center h-24">
+            <div className="flex items-center gap-3 text-slate-400">
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Loading...
             </div>
           </div>
         ) : arrivals.length === 0 ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="text-transit-muted">No upcoming bus arrivals</div>
+          <div className="flex items-center justify-center h-24 text-slate-500">
+            No upcoming buses
           </div>
         ) : (
-          <div className="space-y-1">
-            {arrivals.slice(0, 8).map((arrival, index) => {
-              const isImminent = arrival.minutesAway <= 3;
+          arrivals.slice(0, 5).map((arrival, index) => {
+            const isImminent = arrival.minutesAway <= 3;
+            const isFeatured = index === 0;
 
-              return (
-                <div
-                  key={`${arrival.vehicleId}-${index}`}
-                  className={`train-row grid grid-cols-12 gap-4 px-4 py-3 rounded-lg items-center ${
-                    index === 0 ? "bg-blue-500/10" : ""
-                  }`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  {/* Route */}
-                  <div className="col-span-2">
-                    <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-blue-500/20 font-mono text-lg font-bold text-blue-400">
-                      {arrival.routeName}
-                    </span>
-                  </div>
-
-                  {/* Destination */}
-                  <div className="col-span-4">
-                    <div className="text-lg font-medium text-transit-text truncate">
-                      {arrival.destination}
-                    </div>
-                    {arrival.stopName && (
-                      <div className="text-xs text-transit-muted truncate">
-                        at {arrival.stopName}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Minutes */}
-                  <div className="col-span-2 text-center">
-                    <span
-                      className={`font-mono text-2xl font-bold ${
-                        isImminent
-                          ? "text-transit-warning animate-pulse"
-                          : "text-transit-text"
-                      }`}
-                    >
-                      {arrival.minutesAway}
-                    </span>
-                    <span className="text-sm text-transit-muted ml-1">min</span>
-                  </div>
-
-                  {/* Status */}
-                  <div className="col-span-4 text-right">
-                    <span
-                      className={`text-sm font-medium ${getStatusColor(
-                        arrival.status
-                      )}`}
-                    >
-                      {getStatusText(arrival)}
-                    </span>
-                  </div>
+            return (
+              <div
+                key={`${arrival.vehicleId}-${index}`}
+                className={`departure-row grid grid-cols-12 gap-3 items-center animate-slide-in ${
+                  isFeatured ? "featured" : ""
+                }`}
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                {/* Route */}
+                <div className="col-span-2">
+                  <span className="route-badge route-badge-bus">
+                    {arrival.routeName}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
+
+                {/* Destination */}
+                <div className="col-span-5">
+                  <div className="text-sm font-semibold text-white truncate">
+                    {arrival.destination}
+                  </div>
+                  {arrival.stopName && (
+                    <div className="text-xs text-slate-500 truncate">
+                      {arrival.stopName}
+                    </div>
+                  )}
+                </div>
+
+                {/* Minutes */}
+                <div className="col-span-2 text-center">
+                  <span className={`minutes-display text-xl font-bold ${
+                    isImminent ? "minutes-imminent" : "text-white"
+                  }`}>
+                    {arrival.minutesAway}
+                  </span>
+                  <span className="text-xs text-slate-500 ml-1">min</span>
+                </div>
+
+                {/* Status */}
+                <div className="col-span-3 text-right">
+                  <span className={`text-xs font-medium ${
+                    arrival.status === "approaching" ? "text-amber-400" :
+                    arrival.status === "at-stop" ? "text-teal-400" :
+                    "text-slate-500"
+                  }`}>
+                    {getStatusText(arrival)}
+                  </span>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </div>
   );
 }
-

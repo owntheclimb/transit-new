@@ -3,12 +3,8 @@
 import { useState, useEffect } from "react";
 import type { Notice } from "@/lib/supabase";
 
-interface NoticesPanelProps {
-  initialNotices?: Notice[];
-}
-
-export default function NoticesPanel({ initialNotices = [] }: NoticesPanelProps) {
-  const [notices, setNotices] = useState<Notice[]>(initialNotices);
+export default function NoticesPanel() {
+  const [notices, setNotices] = useState<Notice[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const fetchNotices = async () => {
@@ -25,29 +21,25 @@ export default function NoticesPanel({ initialNotices = [] }: NoticesPanelProps)
 
   useEffect(() => {
     fetchNotices();
-    const interval = setInterval(fetchNotices, 300000); // Refresh every 5 minutes
+    const interval = setInterval(fetchNotices, 300000);
     return () => clearInterval(interval);
   }, []);
 
-  // Rotate through notices
   useEffect(() => {
     if (notices.length <= 1) return;
     
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % notices.length);
-    }, 8000); // Change every 8 seconds
+    }, 8000);
 
     return () => clearInterval(interval);
   }, [notices.length]);
 
-  const getPriorityColor = (priority: Notice["priority"]) => {
+  const getPriorityClass = (priority: Notice["priority"]) => {
     switch (priority) {
-      case "high":
-        return "border-l-transit-delayed bg-transit-delayed/5";
-      case "medium":
-        return "border-l-transit-warning bg-transit-warning/5";
-      default:
-        return "border-l-transit-accent bg-transit-accent/5";
+      case "high": return "notice-high";
+      case "medium": return "notice-medium";
+      default: return "notice-low";
     }
   };
 
@@ -55,29 +47,35 @@ export default function NoticesPanel({ initialNotices = [] }: NoticesPanelProps)
     switch (priority) {
       case "high":
         return (
-          <svg className="w-5 h-5 text-transit-delayed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
+          <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
         );
       case "medium":
         return (
-          <svg className="w-5 h-5 text-transit-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
         );
       default:
         return (
-          <svg className="w-5 h-5 text-transit-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-          </svg>
+          <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-teal-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.276A1 1 0 0018 15V3z" clipRule="evenodd" />
+            </svg>
+          </div>
         );
     }
   };
 
   if (notices.length === 0) {
     return (
-      <div className="panel p-4 h-full flex items-center justify-center">
-        <p className="text-transit-muted text-sm">No active notices</p>
+      <div className="glass-panel p-5 h-full flex items-center justify-center">
+        <p className="text-slate-500 text-sm">No active notices</p>
       </div>
     );
   }
@@ -85,36 +83,24 @@ export default function NoticesPanel({ initialNotices = [] }: NoticesPanelProps)
   const currentNotice = notices[currentIndex];
 
   return (
-    <div className="panel p-4 h-full flex flex-col">
+    <div className="glass-panel p-5 h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <svg
-            className="w-5 h-5 text-transit-accent"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-            />
+          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
-          <h3 className="text-lg font-semibold text-transit-text">
-            Building Notices
-          </h3>
+          <h3 className="text-sm font-semibold text-slate-300">Building Notices</h3>
         </div>
         {notices.length > 1 && (
           <div className="flex gap-1">
             {notices.map((_, i) => (
               <div
                 key={i}
-                className={`w-2 h-2 rounded-full transition-colors ${
+                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
                   i === currentIndex
-                    ? "bg-transit-accent"
-                    : "bg-transit-border"
+                    ? "bg-teal-400 w-4"
+                    : "bg-slate-600"
                 }`}
               />
             ))}
@@ -123,18 +109,14 @@ export default function NoticesPanel({ initialNotices = [] }: NoticesPanelProps)
       </div>
 
       {/* Current Notice */}
-      <div
-        className={`flex-1 rounded-lg border-l-4 p-4 transition-all duration-500 ${getPriorityColor(
-          currentNotice.priority
-        )}`}
-      >
-        <div className="flex items-start gap-3">
+      <div className={`flex-1 rounded-xl p-4 ${getPriorityClass(currentNotice.priority)}`}>
+        <div className="flex gap-3 h-full">
           {getPriorityIcon(currentNotice.priority)}
           <div className="flex-1 min-w-0">
-            <h4 className="text-lg font-semibold text-transit-text mb-2">
+            <h4 className="text-sm font-bold text-white mb-1">
               {currentNotice.title}
             </h4>
-            <p className="text-transit-muted leading-relaxed">
+            <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">
               {currentNotice.content}
             </p>
           </div>
@@ -143,4 +125,3 @@ export default function NoticesPanel({ initialNotices = [] }: NoticesPanelProps)
     </div>
   );
 }
-

@@ -16,7 +16,7 @@ export default function Clock() {
 
   if (!time) {
     return (
-      <div className="clock-display text-6xl font-bold text-transit-text">
+      <div className="clock-time text-5xl font-semibold">
         --:--
       </div>
     );
@@ -29,22 +29,23 @@ export default function Clock() {
   const hour12 = hours % 12 || 12;
 
   const dateStr = time.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
+    weekday: "short",
+    month: "short",
     day: "numeric",
   });
 
   return (
-    <div className="text-center">
-      <div className="clock-display text-7xl font-bold text-transit-text tracking-wide">
-        {hour12}:{minutes}
-        <span className="text-4xl text-transit-muted ml-2">{seconds}</span>
-        <span className="text-3xl text-transit-accent ml-3">{ampm}</span>
+    <div className="text-right">
+      <div className="flex items-baseline gap-2">
+        <span className="clock-time text-5xl font-semibold tracking-tight">
+          {hour12}:{minutes}
+        </span>
+        <span className="text-xl text-slate-500 font-mono">{seconds}</span>
+        <span className="text-lg font-semibold text-teal-400 ml-1">{ampm}</span>
       </div>
-      <div className="text-xl text-transit-muted mt-2 font-light tracking-wide">
+      <div className="text-sm text-slate-500 font-medium mt-1">
         {dateStr}
       </div>
     </div>
   );
 }
-

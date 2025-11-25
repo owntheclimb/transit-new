@@ -7,50 +7,52 @@ export const dynamic = "force-dynamic";
 
 export default function TransitDisplay() {
   return (
-    <main className="h-screen w-screen bg-transit-dark p-6 overflow-hidden">
-      {/* Background gradient */}
-      <div className="fixed inset-0 bg-gradient-to-br from-transit-dark via-transit-dark to-[#0d1117] pointer-events-none" />
+    <main className="h-screen w-screen bg-[#05080d] p-8 overflow-hidden relative">
+      {/* Ambient background glows */}
+      <div className="ambient-glow glow-teal w-[600px] h-[600px] -top-40 -left-40" />
+      <div className="ambient-glow glow-blue w-[500px] h-[500px] top-1/2 -right-40" />
+      <div className="ambient-glow glow-purple w-[400px] h-[400px] -bottom-20 left-1/3" />
       
-      {/* Subtle grid pattern */}
+      {/* Subtle noise texture overlay */}
       <div 
-        className="fixed inset-0 opacity-[0.02] pointer-events-none"
+        className="fixed inset-0 opacity-[0.015] pointer-events-none z-0"
         style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                           linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-          backgroundSize: '50px 50px'
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
         }}
       />
 
+      {/* Main content */}
       <div className="relative z-10 h-full flex flex-col gap-6">
         {/* Header */}
         <header className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-transit-accent to-teal-600 flex items-center justify-center shadow-lg shadow-transit-accent/20">
-              <svg
-                className="w-7 h-7 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
+          <div className="flex items-center gap-5">
+            {/* Logo / Building identity */}
+            <div className="relative">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-400 via-teal-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-teal-500/25">
+                <span className="text-2xl font-bold text-white">22</span>
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#05080d] flex items-center justify-center">
+                <div className="w-3 h-3 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 animate-pulse" />
+              </div>
             </div>
+            
             <div>
-              <h1 className="text-2xl font-bold text-transit-text tracking-tight">
-                22 Southwest St
+              <h1 className="text-3xl font-bold text-white tracking-tight">
+                Southwest Street
               </h1>
-              <p className="text-sm text-transit-muted">
-                Mount Vernon, NY • Transit Information
+              <p className="text-sm text-slate-400 font-medium">
+                Mount Vernon, NY • Transit Hub
               </p>
             </div>
           </div>
           
-          <Clock />
+          <div className="flex items-center gap-6">
+            <div className="live-indicator">
+              <div className="live-dot" />
+              Live
+            </div>
+            <Clock />
+          </div>
         </header>
 
         {/* Main Content Grid */}
@@ -68,24 +70,28 @@ export default function TransitDisplay() {
             </div>
 
             {/* Notices Panel */}
-            <div className="h-48">
+            <div className="h-44">
               <NoticesPanel />
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <footer className="flex items-center justify-between text-xs text-transit-muted">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-transit-accent animate-pulse" />
-            <span>Live Data</span>
+        <footer className="flex items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center gap-4">
+            <span className="text-slate-600">MTA Metro-North</span>
+            <span className="text-slate-700">•</span>
+            <span className="text-slate-600">Westchester Bee-Line</span>
           </div>
-          <div>
-            Data provided by MTA • Updates every 60 seconds
+          <div className="flex items-center gap-2">
+            <span>Auto-refresh 60s</span>
+            <span className="text-slate-700">•</span>
+            <a href="/admin" className="text-slate-500 hover:text-teal-400 transition-colors">
+              Admin
+            </a>
           </div>
         </footer>
       </div>
     </main>
   );
 }
-
