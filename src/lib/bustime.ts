@@ -27,6 +27,14 @@ export interface BusApiResponse {
   note?: string;
 }
 
+// Get current time in Eastern timezone
+function getEasternTime(): Date {
+  const now = new Date();
+  // Convert to Eastern time using toLocaleString
+  const easternString = now.toLocaleString("en-US", { timeZone: "America/New_York" });
+  return new Date(easternString);
+}
+
 // Note: Mount Vernon uses Westchester County Bee-Line buses
 // Bee-Line does not have a public real-time tracking API
 // This returns schedule-based estimates for routes serving the area
@@ -47,10 +55,11 @@ export async function getStopArrivals(stopId: string): Promise<BusArrival[]> {
 // These are based on published Bee-Line schedules for routes serving Mount Vernon
 export function getBeeLineScheduleEstimates(): BusApiResponse {
   const now = new Date();
-  const currentHour = now.getHours();
-  const currentDay = now.getDay(); // 0 = Sunday, 6 = Saturday
+  const eastern = getEasternTime();
+  const currentHour = eastern.getHours();
+  const currentDay = eastern.getDay(); // 0 = Sunday, 6 = Saturday
   
-  // Check if it's within operating hours (roughly 5 AM - 11 PM)
+  // Check if it's within operating hours (roughly 5 AM - 11 PM Eastern)
   const isOperatingHours = currentHour >= 5 && currentHour < 23;
   const isWeekend = currentDay === 0 || currentDay === 6;
   
@@ -58,7 +67,7 @@ export function getBeeLineScheduleEstimates(): BusApiResponse {
     return {
       arrivals: [],
       isLive: false,
-      note: "Bus service typically runs 5 AM - 11 PM",
+      note: `Bus service runs 5 AM - 11 PM ET (currently ${currentHour}:${eastern.getMinutes().toString().padStart(2, '0')} ET)`,
     };
   }
 
@@ -72,10 +81,10 @@ export function getBeeLineScheduleEstimates(): BusApiResponse {
   ];
 
   const arrivals: (BusArrival & { stopName: string; stopId: string })[] = [];
+  const minuteOfHour = eastern.getMinutes();
   
   for (const r of routes) {
     // Calculate next arrival based on frequency
-    const minuteOfHour = now.getMinutes();
     const nextArrival = r.frequency - (minuteOfHour % r.frequency);
     
     // Add next bus
@@ -86,7 +95,7 @@ export function getBeeLineScheduleEstimates(): BusApiResponse {
       expectedArrival: new Date(now.getTime() + nextArrival * 60000).toISOString(),
       minutesAway: nextArrival,
       vehicleId: `beeline-${r.route}-1`,
-      stops: Math.floor(Math.random() * 5) + 2,
+      stops: 3,
       status: nextArrival <= 3 ? "approaching" : "en-route",
       stopName: "4th Ave & Southwest St",
       stopId: "beeline-1",
@@ -101,7 +110,7 @@ export function getBeeLineScheduleEstimates(): BusApiResponse {
       expectedArrival: new Date(now.getTime() + followingArrival * 60000).toISOString(),
       minutesAway: followingArrival,
       vehicleId: `beeline-${r.route}-2`,
-      stops: Math.floor(Math.random() * 5) + 3,
+      stops: 5,
       status: "en-route",
       stopName: "S 4th Ave & E 3rd St",
       stopId: "beeline-2",
