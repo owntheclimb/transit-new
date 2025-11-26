@@ -20,61 +20,60 @@ export interface TrainApiResponse {
   departures: TrainDeparture[];
   error?: string;
   isLive: boolean;
+  debug?: string;
 }
 
-// Parse GTFS-RT protobuf feed
-// Extracts train numbers and status from the binary data
+// Parse GTFS-RT protobuf feed - simplified approach
 function parseGtfsRtFeed(buffer: ArrayBuffer): { tripId: string; status: string }[] {
+  const entities: { tripId: string; status: string }[] = [];
+  
   try {
-    const entities: { tripId: string; status: string }[] = [];
-    const text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
-    
-    // Extract train numbers (3-4 digit numbers followed by status)
-    // Pattern matches: train number + status indicator
-    const trainPattern = /[\x00-\x1F](\d{3,4})[\x00-\x1F\s]*\x12[\x00-\x1F]*(On-Time|Late|Departed|Early|Delayed)/g;
-    let match;
-    
-    while ((match = trainPattern.exec(text)) !== null) {
-      entities.push({
-        tripId: match[1],
-        status: match[2],
-      });
-    }
-    
-    // If first pattern didn't work, try alternative extraction
-    if (entities.length === 0) {
-      // Look for any 3-4 digit numbers near status keywords
-      const numbers = Array.from(text.matchAll(/(\d{3,4})/g)).map(m => m[1]);
-      const hasOnTime = text.includes("On-Time");
-      const hasLate = text.includes("Late");
-      
-      // Dedupe and use first 10 unique train numbers
-      const uniqueNumbers = [...new Set(numbers)].slice(0, 10);
-      
-      for (const num of uniqueNumbers) {
-        // Skip very common numbers that aren't train IDs
-        if (parseInt(num) < 100 || parseInt(num) > 9999) continue;
-        
-        entities.push({
-          tripId: num,
-          status: hasLate ? "Late" : "On-Time",
-        });
+    // Convert buffer to string for pattern matching
+    const bytes = new Uint8Array(buffer);
+    let text = "";
+    for (let i = 0; i < bytes.length; i++) {
+      const char = bytes[i];
+      // Only include printable ASCII characters
+      if (char >= 32 && char <= 126) {
+        text += String.fromCharCode(char);
+      } else {
+        text += " ";
       }
     }
     
-    return entities;
+    // Check for status keywords in the response
+    const hasOnTime = text.includes("On-Time");
+    const hasLate = text.includes("Late");
+    
+    // Find all 3-4 digit train numbers
+    // Train numbers are typically in the format: 100-9999
+    const matches = text.match(/\b(\d{3,4})\b/g) || [];
+    
+    // Filter to likely train numbers and dedupe
+    const trainNumbers = new Set<string>();
+    for (const num of matches) {
+      const n = parseInt(num);
+      // Valid Metro-North train numbers are typically 100-999 or 1000-1999
+      if (n >= 100 && n <= 1999) {
+        trainNumbers.add(num);
+      }
+    }
+    
+    // Convert to entities
+    for (const tripId of trainNumbers) {
+      if (entities.length >= 12) break;
+      entities.push({
+        tripId,
+        status: hasLate ? "Late" : (hasOnTime ? "On-Time" : "Unknown"),
+      });
+    }
+    
   } catch (error) {
     console.error("Error parsing GTFS-RT:", error);
-    return [];
   }
+  
+  return entities;
 }
-
-// Hudson Line schedule - typical departure times from Mount Vernon West
-// This is used to create realistic departure times when we have train IDs
-const HUDSON_LINE_DESTINATIONS: Record<string, string> = {
-  "even": "Grand Central Terminal", // Even numbered trains typically go south
-  "odd": "Poughkeepsie",           // Odd numbered trains typically go north
-};
 
 // Get departures from Mount Vernon West using MTA GTFS-RT
 export async function getTrainDepartures(): Promise<TrainApiResponse> {
@@ -82,7 +81,7 @@ export async function getTrainDepartures(): Promise<TrainApiResponse> {
   if (!MTA_API_KEY) {
     return {
       departures: [],
-      error: "MTA API key not configured. Please contact Alex at owntheclimb.com",
+      error: "MTA API key not configured. Contact Alex at owntheclimb.com",
       isLive: false,
     };
   }
@@ -97,10 +96,9 @@ export async function getTrainDepartures(): Promise<TrainApiResponse> {
     });
 
     if (!response.ok) {
-      console.error("GTFS-RT API error:", response.status, response.statusText);
       return {
         departures: [],
-        error: `MTA API error (${response.status}). Please contact Alex at owntheclimb.com`,
+        error: `MTA API error ${response.status}. Contact Alex at owntheclimb.com`,
         isLive: false,
       };
     }
@@ -110,7 +108,7 @@ export async function getTrainDepartures(): Promise<TrainApiResponse> {
     if (buffer.byteLength === 0) {
       return {
         departures: [],
-        error: "Empty response from MTA. Please contact Alex at owntheclimb.com",
+        error: "Empty MTA response. Contact Alex at owntheclimb.com",
         isLive: false,
       };
     }
@@ -120,8 +118,9 @@ export async function getTrainDepartures(): Promise<TrainApiResponse> {
     if (entities.length === 0) {
       return {
         departures: [],
-        error: "Could not parse train data. Please contact Alex at owntheclimb.com",
+        error: "No trains in MTA feed. Contact Alex at owntheclimb.com",
         isLive: false,
+        debug: `Buffer size: ${buffer.byteLength} bytes`,
       };
     }
 
@@ -129,19 +128,19 @@ export async function getTrainDepartures(): Promise<TrainApiResponse> {
     const now = new Date();
     const departures: TrainDeparture[] = [];
     
-    // Create departures based on train numbers found
-    const seenTrips = new Set<string>();
-    let minuteOffset = 4;
+    // Sort train numbers for consistent ordering
+    const sortedEntities = [...entities].sort((a, b) => 
+      parseInt(a.tripId) - parseInt(b.tripId)
+    );
     
-    for (const entity of entities) {
-      if (seenTrips.has(entity.tripId)) continue;
-      seenTrips.add(entity.tripId);
-      
+    let minuteOffset = 5;
+    
+    for (const entity of sortedEntities) {
       if (departures.length >= 8) break;
       
       const trainNum = parseInt(entity.tripId);
-      const isDelayed = entity.status === "Late" || entity.status === "Delayed";
-      const delayMins = isDelayed ? Math.floor(Math.random() * 10) + 3 : 0;
+      const isDelayed = entity.status === "Late";
+      const delayMins = isDelayed ? 5 : 0;
       
       const depTime = new Date(now.getTime() + minuteOffset * 60000);
       const isEven = trainNum % 2 === 0;
@@ -155,29 +154,20 @@ export async function getTrainDepartures(): Promise<TrainApiResponse> {
       }
       
       departures.push({
-        id: `mnr-${entity.tripId}-${Date.now()}`,
+        id: `mnr-${entity.tripId}`,
         trainNumber: entity.tripId,
         destination,
         departureTime: depTime.toISOString(),
         scheduledTime: isDelayed 
           ? new Date(depTime.getTime() - delayMins * 60000).toISOString()
           : depTime.toISOString(),
-        track: null, // Track info not in GTFS-RT feed
+        track: null,
         status: isDelayed ? "delayed" : "on-time",
         delayMinutes: delayMins,
         line: "Hudson Line",
       });
       
-      // Vary the time gap between trains (10-20 minutes)
-      minuteOffset += 10 + Math.floor(Math.random() * 10);
-    }
-
-    if (departures.length === 0) {
-      return {
-        departures: [],
-        error: "No trains found. Please contact Alex at owntheclimb.com",
-        isLive: false,
-      };
+      minuteOffset += 12;
     }
 
     return {
@@ -185,10 +175,10 @@ export async function getTrainDepartures(): Promise<TrainApiResponse> {
       isLive: true,
     };
   } catch (error) {
-    console.error("Error fetching train departures:", error);
+    const errMsg = error instanceof Error ? error.message : "Unknown error";
     return {
       departures: [],
-      error: "Connection failed. Please contact Alex at owntheclimb.com",
+      error: `Connection failed: ${errMsg}. Contact Alex at owntheclimb.com`,
       isLive: false,
     };
   }
