@@ -4,34 +4,39 @@
 const TRIP_UPDATES_URL = "https://westchester-gmv.itoworld.com/production/tripupdates.json";
 
 // Stop IDs for Mount Vernon West Railroad Station area
-const TARGET_STOP_IDS = new Set([
+// The GTFS-RT feed uses "ITOAUTO" prefix format
+const TARGET_STOP_PATTERNS = [
   "884",   // Mount Vernon West Railroad Station
   "966",   // Mount Vernon West Railroad Station (alternate)
   "885",   // Mount Vernon Ave @ N Terrace Ave
   "887",   // Mount Vernon Ave @ S Bond St
   "964",   // Mount Vernon Ave @ N Bond St
   "965",   // Mount Vernon Ave @ N High St
-]);
+];
 
 // Route information for display names
+// The GTFS-RT feed uses simple numeric route IDs
 const ROUTE_INFO: Record<string, { name: string; destination: string }> = {
-  "24064": { name: "7", destination: "Yonkers - New Rochelle" },
-  "24080": { name: "26", destination: "The Bronx - Yonkers" },
-  "24089": { name: "40", destination: "White Plains" },
-  "24090": { name: "41", destination: "White Plains" },
-  "24091": { name: "42", destination: "New Rochelle" },
-  "24092": { name: "43", destination: "Westchester MC" },
-  "24094": { name: "52", destination: "Bronxville" },
-  "24095": { name: "53", destination: "Chester Heights" },
-  "24096": { name: "54", destination: "Mt Vernon Local" },
-  // Fallback patterns for route IDs that might be different
+  // Main routes serving Mount Vernon West area
+  "5": { name: "5", destination: "Yonkers - White Plains" },
   "7": { name: "7", destination: "Yonkers - New Rochelle" },
+  "8": { name: "8", destination: "Yonkers - Tuckahoe" },
+  "10": { name: "10", destination: "Croton Commuter" },
+  "18": { name: "18", destination: "Peekskill Commuter" },
+  "20": { name: "20", destination: "The Bronx - White Plains" },
+  "21": { name: "21", destination: "The Bronx - White Plains" },
   "26": { name: "26", destination: "The Bronx - Yonkers" },
   "40": { name: "40", destination: "White Plains" },
   "41": { name: "41", destination: "White Plains" },
   "42": { name: "42", destination: "New Rochelle" },
   "43": { name: "43", destination: "Westchester MC" },
   "52": { name: "52", destination: "Bronxville" },
+  "53": { name: "53", destination: "Chester Heights" },
+  "54": { name: "54", destination: "Mt Vernon Local" },
+  "55": { name: "55", destination: "The Bronx - Yonkers" },
+  "60": { name: "60", destination: "White Plains - Yonkers" },
+  "61": { name: "61", destination: "Getty Square" },
+  "232": { name: "BxM4C", destination: "Manhattan Express" },
 };
 
 export interface BusStop {
@@ -130,12 +135,11 @@ export async function getBeeLineRealtime(): Promise<BusApiResponse> {
         const stopId = stopUpdate.stop_id;
         
         // Check if this stop is one we're interested in
-        // Match by exact ID or by numeric portion
-        const stopIdNumeric = stopId.replace(/\D/g, '');
-        const isTargetStop = TARGET_STOP_IDS.has(stopId) || 
-                            TARGET_STOP_IDS.has(stopIdNumeric) ||
-                            stopId.includes("884") || 
-                            stopId.includes("966");
+        // The GTFS-RT feed uses formats like "ITOAUTO1884", "ITOAUTO2884"
+        // We match if the stop ID contains any of our target patterns
+        const isTargetStop = TARGET_STOP_PATTERNS.some(pattern => 
+          stopId.includes(pattern)
+        );
 
         if (!isTargetStop) continue;
 
