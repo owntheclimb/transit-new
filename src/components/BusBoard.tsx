@@ -80,9 +80,16 @@ export default function BusBoard() {
         </div>
         <div className="flex items-center gap-2">
           {data && !loading && (
-            <span className="text-xs font-semibold text-blue-400 bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20">
-              SCHEDULE
-            </span>
+            data.isLive ? (
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-green-400 bg-green-500/10 px-2 py-1 rounded border border-green-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                LIVE
+              </span>
+            ) : (
+              <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">
+                OFFLINE
+              </span>
+            )
           )}
           {lastUpdated && (
             <span className="text-xs text-slate-500 font-mono bg-slate-800/50 px-2 py-1 rounded">
