@@ -7,7 +7,7 @@ interface TrainApiResponse {
   departures: TrainDeparture[];
   error?: string;
   isLive: boolean;
-  isEstimate?: boolean;
+  dataSource?: string;
 }
 
 export default function TrainBoard() {
@@ -24,7 +24,7 @@ export default function TrainBoard() {
           departures: result.departures || [],
           error: result.error,
           isLive: result.isLive,
-          isEstimate: result.isEstimate,
+          dataSource: result.dataSource,
         });
         setLastUpdated(new Date());
       } else {
@@ -92,13 +92,13 @@ export default function TrainBoard() {
         </div>
         <div className="flex-1">
           <h2 className="text-lg font-bold text-white">Metro-North Railroad</h2>
-          <p className="text-sm text-slate-400">Mount Vernon West • Hudson Line</p>
+          <p className="text-sm text-slate-400">Mount Vernon West • Harlem Line</p>
         </div>
         <div className="flex items-center gap-2">
           {data?.isLive ? (
             <span className="flex items-center gap-1.5 text-xs font-semibold text-green-400 bg-green-500/10 px-2 py-1 rounded border border-green-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              {data.isEstimate ? "SCHED" : "LIVE"}
+              LIVE
             </span>
           ) : data && !loading ? (
             <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">

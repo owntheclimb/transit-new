@@ -11,7 +11,7 @@ export async function GET() {
       departures: result.departures,
       error: result.error,
       isLive: result.isLive,
-      isEstimate: result.isEstimate,
+      dataSource: result.dataSource,
       timestamp: new Date().toISOString(),
       station: "Mount Vernon West",
     });
