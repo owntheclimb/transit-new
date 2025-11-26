@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { TrainDeparture } from "@/lib/trains";
 
 interface TrainApiResponse {
   departures: TrainDeparture[];
   error?: string;
   isLive: boolean;
+  isEstimate?: boolean;
 }
 
 export default function TrainBoard() {
@@ -14,7 +15,7 @@ export default function TrainBoard() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetchDepartures = async () => {
+  const fetchDepartures = useCallback(async () => {
     try {
       const response = await fetch("/api/trains");
       if (response.ok) {
@@ -23,6 +24,7 @@ export default function TrainBoard() {
           departures: result.departures || [],
           error: result.error,
           isLive: result.isLive,
+          isEstimate: result.isEstimate,
         });
         setLastUpdated(new Date());
       } else {
@@ -42,29 +44,42 @@ export default function TrainBoard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDepartures();
     const interval = setInterval(fetchDepartures, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchDepartures]);
 
   const formatTime = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
+    try {
+      const date = new Date(isoString);
+      if (isNaN(date.getTime())) return "--:--";
+      return date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return "--:--";
+    }
   };
 
   const getMinutesUntil = (isoString: string) => {
-    const now = new Date();
-    const departure = new Date(isoString);
-    const diff = Math.round((departure.getTime() - now.getTime()) / 60000);
-    return Math.max(0, diff);
+    try {
+      const now = new Date();
+      const departure = new Date(isoString);
+      if (isNaN(departure.getTime())) return 0;
+      const diff = Math.round((departure.getTime() - now.getTime()) / 60000);
+      return Math.max(0, diff);
+    } catch {
+      return 0;
+    }
   };
+
+  // Safely get departures array
+  const departures = data?.departures ?? [];
 
   return (
     <div className="glass-panel p-5 h-full flex flex-col">
@@ -83,7 +98,7 @@ export default function TrainBoard() {
           {data?.isLive ? (
             <span className="flex items-center gap-1.5 text-xs font-semibold text-green-400 bg-green-500/10 px-2 py-1 rounded border border-green-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              LIVE
+              {data.isEstimate ? "SCHED" : "LIVE"}
             </span>
           ) : data && !loading ? (
             <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">
@@ -135,12 +150,12 @@ export default function TrainBoard() {
                   <span className="text-sm">Loading departures...</span>
                 </div>
               </div>
-            ) : data?.departures.length === 0 ? (
+            ) : departures.length === 0 ? (
               <div className="flex items-center justify-center h-32 text-slate-500">
                 No upcoming departures
               </div>
             ) : (
-              data?.departures.slice(0, 6).map((departure, index) => {
+              departures.slice(0, 6).map((departure, index) => {
                 const minutes = getMinutesUntil(departure.departureTime);
                 const isImminent = minutes <= 5;
                 const isFeatured = index === 0;

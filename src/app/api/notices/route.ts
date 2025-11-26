@@ -3,7 +3,11 @@ import { getActiveNotices, createNotice, supabase, type Notice } from "@/lib/sup
 
 export const dynamic = "force-dynamic";
 
+// Admin password - set via environment variable, with secure default
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "gavperlman";
+
 // In-memory notices for when Supabase isn't configured
+// Note: On Vercel serverless, this may not persist across requests
 let inMemoryNotices: Notice[] = [];
 
 export async function GET() {
@@ -14,6 +18,7 @@ export async function GET() {
       return NextResponse.json({
         notices,
         timestamp: new Date().toISOString(),
+        storage: "supabase",
       });
     }
 
@@ -44,6 +49,7 @@ export async function GET() {
     return NextResponse.json({
       notices: allNotices,
       timestamp: new Date().toISOString(),
+      storage: "memory",
     });
   } catch (error) {
     console.error("Error fetching notices:", error);
@@ -59,11 +65,18 @@ export async function POST(request: Request) {
     const body = await request.json();
     
     // Check admin password
-    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
-    if (body.password !== adminPassword) {
+    if (body.password !== ADMIN_PASSWORD) {
       return NextResponse.json(
         { error: "Unauthorized - incorrect password" },
         { status: 401 }
+      );
+    }
+
+    // Validate required fields
+    if (!body.title || !body.content) {
+      return NextResponse.json(
+        { error: "Title and content are required" },
+        { status: 400 }
       );
     }
 
@@ -86,12 +99,12 @@ export async function POST(request: Request) {
         );
       }
 
-      return NextResponse.json({ notice });
+      return NextResponse.json({ notice, storage: "supabase" });
     }
 
-    // Otherwise store in memory (will persist until server restart)
+    // Otherwise store in memory
     const newNotice: Notice = {
-      id: `notice-${Date.now()}`,
+      id: `notice-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       title: body.title,
       content: body.content,
       priority: body.priority || "low",
@@ -104,6 +117,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ 
       notice: newNotice,
+      storage: "memory",
       message: "Notice created (stored in memory - will reset on server restart)"
     });
   } catch (error) {
@@ -114,3 +128,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

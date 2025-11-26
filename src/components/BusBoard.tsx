@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { BusArrival } from "@/lib/bustime";
 
 interface CombinedArrival extends BusArrival {
@@ -20,7 +20,7 @@ export default function BusBoard() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetchArrivals = async () => {
+  const fetchArrivals = useCallback(async () => {
     try {
       const response = await fetch("/api/buses");
       if (response.ok) {
@@ -49,13 +49,13 @@ export default function BusBoard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchArrivals();
     const interval = setInterval(fetchArrivals, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchArrivals]);
 
   const getStatusText = (arrival: CombinedArrival) => {
     if (arrival.status === "at-stop") return "At Stop";
@@ -64,6 +64,9 @@ export default function BusBoard() {
     if (arrival.stops > 1) return `${arrival.stops} stops`;
     return "";
   };
+
+  // Safely get arrivals array
+  const arrivals = data?.arrivals ?? [];
 
   return (
     <div className="glass-panel p-5 h-full flex flex-col">
@@ -114,7 +117,7 @@ export default function BusBoard() {
         </div>
       ) : (
         <>
-          {/* Note about schedule-based data */}
+          {/* Note about data source */}
           {data?.note && (
             <div className="text-xs text-slate-500 mb-2 px-1 italic">
               {data.note}
@@ -141,18 +144,18 @@ export default function BusBoard() {
                   <span className="text-sm">Loading...</span>
                 </div>
               </div>
-            ) : data?.arrivals.length === 0 ? (
+            ) : arrivals.length === 0 ? (
               <div className="flex items-center justify-center h-24 text-slate-500 text-sm">
                 No buses at this time
               </div>
             ) : (
-              data?.arrivals.slice(0, 5).map((arrival, index) => {
+              arrivals.slice(0, 5).map((arrival, index) => {
                 const isImminent = arrival.minutesAway <= 3;
                 const isFeatured = index === 0;
 
                 return (
                   <div
-                    key={`${arrival.vehicleId}-${index}`}
+                    key={`${arrival.vehicleId}-${arrival.routeId}-${index}`}
                     className={`departure-row grid grid-cols-12 gap-3 items-center animate-slide-in ${
                       isFeatured ? "featured" : ""
                     }`}

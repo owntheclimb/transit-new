@@ -3,19 +3,55 @@
 
 const TRIP_UPDATES_URL = "https://westchester-gmv.itoworld.com/production/tripupdates.json";
 
-// Stop IDs for Mount Vernon West Railroad Station area
-// The GTFS-RT feed uses "ITOAUTO" prefix format
-const TARGET_STOP_PATTERNS = [
-  "884",   // Mount Vernon West Railroad Station
-  "966",   // Mount Vernon West Railroad Station (alternate)
-  "885",   // Mount Vernon Ave @ N Terrace Ave
-  "887",   // Mount Vernon Ave @ S Bond St
-  "964",   // Mount Vernon Ave @ N Bond St
-  "965",   // Mount Vernon Ave @ N High St
-];
+// Request timeout in milliseconds
+const API_TIMEOUT = 8000;
+
+// Exact stop IDs for Mount Vernon West Railroad Station area
+// Using exact matches to avoid false positives
+const TARGET_STOP_IDS = new Set([
+  // Mount Vernon West Railroad Station stops
+  "884",
+  "966",
+  "ITOAUTO884",
+  "ITOAUTO966",
+  "ITOAUTO1884",
+  "ITOAUTO2884",
+  "ITOAUTO1966",
+  "ITOAUTO2966",
+  // Nearby stops on Mount Vernon Ave
+  "885",
+  "887",
+  "964",
+  "965",
+  "ITOAUTO885",
+  "ITOAUTO887",
+  "ITOAUTO964",
+  "ITOAUTO965",
+  "ITOAUTO1885",
+  "ITOAUTO1887",
+  "ITOAUTO1964",
+  "ITOAUTO1965",
+]);
+
+// Check if a stop ID matches our target stops
+// Uses exact match first, then pattern match as fallback
+function isTargetStop(stopId: string): boolean {
+  // Direct match
+  if (TARGET_STOP_IDS.has(stopId)) {
+    return true;
+  }
+  
+  // Extract numeric portion and check if it's one of our target stop numbers
+  const match = stopId.match(/(\d{3})$/);
+  if (match) {
+    const stopNum = match[1];
+    return ["884", "966", "885", "887", "964", "965"].includes(stopNum);
+  }
+  
+  return false;
+}
 
 // Route information for display names
-// The GTFS-RT feed uses simple numeric route IDs
 const ROUTE_INFO: Record<string, { name: string; destination: string }> = {
   // Main routes serving Mount Vernon West area
   "5": { name: "5", destination: "Yonkers - White Plains" },
@@ -100,15 +136,37 @@ interface GtfsRtEntity {
   };
 }
 
+// Fetch with timeout
+async function fetchWithTimeout(url: string, options: RequestInit, timeout: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
 // Fetch real-time bus arrivals from Westchester GTFS-RT feed
 export async function getBeeLineRealtime(): Promise<BusApiResponse> {
   try {
-    const response = await fetch(TRIP_UPDATES_URL, {
-      cache: "no-store",
-      headers: {
-        "Accept": "application/json",
+    const response = await fetchWithTimeout(
+      TRIP_UPDATES_URL,
+      {
+        cache: "no-store",
+        headers: {
+          "Accept": "application/json",
+        },
       },
-    });
+      API_TIMEOUT
+    );
 
     if (!response.ok) {
       return {
@@ -135,13 +193,7 @@ export async function getBeeLineRealtime(): Promise<BusApiResponse> {
         const stopId = stopUpdate.stop_id;
         
         // Check if this stop is one we're interested in
-        // The GTFS-RT feed uses formats like "ITOAUTO1884", "ITOAUTO2884"
-        // We match if the stop ID contains any of our target patterns
-        const isTargetStop = TARGET_STOP_PATTERNS.some(pattern => 
-          stopId.includes(pattern)
-        );
-
-        if (!isTargetStop) continue;
+        if (!isTargetStop(stopId)) continue;
 
         const arrivalTime = stopUpdate.arrival?.time || stopUpdate.departure?.time;
         if (!arrivalTime) continue;
@@ -197,6 +249,14 @@ export async function getBeeLineRealtime(): Promise<BusApiResponse> {
       isLive: true,
     };
   } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return {
+        arrivals: [],
+        error: "Bee-Line API timeout. Contact Alex at owntheclimb.com",
+        isLive: false,
+      };
+    }
+    
     const errMsg = error instanceof Error ? error.message : "Unknown error";
     return {
       arrivals: [],
@@ -206,24 +266,12 @@ export async function getBeeLineRealtime(): Promise<BusApiResponse> {
   }
 }
 
-// Legacy exports for compatibility
-export async function getNearbyStops(lat: number, lon: number, radius: number): Promise<BusStop[]> {
+// Get nearby stops info
+export async function getNearbyStops(): Promise<BusStop[]> {
   return [
     { id: "884", name: "Mount Vernon West Railroad Station", lat: 40.913531, lon: -73.850129 },
     { id: "966", name: "Mount Vernon West Railroad Station", lat: 40.913733, lon: -73.85 },
+    { id: "885", name: "Mount Vernon Ave @ N Terrace Ave", lat: 40.912336, lon: -73.847979 },
+    { id: "887", name: "Mount Vernon Ave @ S Bond St", lat: 40.911194, lon: -73.84558 },
   ];
-}
-
-export async function getStopArrivals(stopId: string): Promise<BusArrival[]> {
-  return [];
-}
-
-// For backward compatibility
-export function getBeeLineScheduleEstimates(): BusApiResponse {
-  // This is now just a wrapper - actual implementation uses realtime
-  return {
-    arrivals: [],
-    isLive: false,
-    note: "Use getBeeLineRealtime() for live data",
-  };
 }

@@ -1,29 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Notice } from "@/lib/supabase";
 
 export default function NoticesPanel() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const fetchNotices = async () => {
+  const fetchNotices = useCallback(async () => {
     try {
       const response = await fetch("/api/notices");
       if (response.ok) {
         const data = await response.json();
-        setNotices(data.notices || []);
+        const fetchedNotices = data.notices || [];
+        setNotices(fetchedNotices);
+        // Reset index if it's out of bounds
+        if (currentIndex >= fetchedNotices.length) {
+          setCurrentIndex(0);
+        }
       }
     } catch (error) {
       console.error("Error fetching notices:", error);
     }
-  };
+  }, [currentIndex]);
 
   useEffect(() => {
     fetchNotices();
-    const interval = setInterval(fetchNotices, 300000);
+    const interval = setInterval(fetchNotices, 300000); // 5 minutes
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchNotices]);
 
   useEffect(() => {
     if (notices.length <= 1) return;
@@ -80,7 +85,18 @@ export default function NoticesPanel() {
     );
   }
 
-  const currentNotice = notices[currentIndex];
+  // Ensure currentIndex is within bounds
+  const safeIndex = Math.min(currentIndex, notices.length - 1);
+  const currentNotice = notices[safeIndex];
+
+  // Safety check - if notice is undefined, show fallback
+  if (!currentNotice) {
+    return (
+      <div className="glass-panel p-4 h-full flex items-center justify-center">
+        <p className="text-slate-500 text-sm">Loading notices...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="glass-panel p-4 h-full flex flex-col">
@@ -98,7 +114,7 @@ export default function NoticesPanel() {
               <div
                 key={i}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i === currentIndex
+                  i === safeIndex
                     ? "bg-teal-400 w-5"
                     : "bg-slate-600 w-1.5"
                 }`}
