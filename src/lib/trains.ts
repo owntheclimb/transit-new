@@ -177,15 +177,28 @@ function parseGtfsRtFallback(buffer: ArrayBuffer): ParsedTripUpdate[] {
     }
   }
   
-  // Extract train IDs
-  const trainMatches = text.match(/\b([1-9]\d{2,3})\b/g) || [];
-  const uniqueTrains = Array.from(new Set(trainMatches)).filter(num => {
+  // Extract train IDs with their associated status
+  // Pattern: train number followed by status within ~50 chars
+  const trainStatusPattern = /\b([1-9]\d{2,3})\b[^0-9]{0,50}(On-Time|Late|Delayed|Early)/g;
+  const trainStatuses: Map<string, string> = new Map();
+  
+  let match;
+  while ((match = trainStatusPattern.exec(text)) !== null) {
+    const trainNum = match[1];
+    const status = match[2];
+    const num = parseInt(trainNum);
+    if (num >= 100 && num <= 1999) {
+      trainStatuses.set(trainNum, status);
+    }
+  }
+  
+  // Also get trains without status (default to On-Time)
+  const allTrainMatches = text.match(/\b([1-9]\d{2,3})\b/g) || [];
+  const uniqueTrains = Array.from(new Set(allTrainMatches)).filter(num => {
     const n = parseInt(num);
     return n >= 100 && n <= 1999;
   });
   
-  const hasOnTime = text.includes("On-Time");
-  const hasLate = text.includes("Late");
   const now = Math.floor(Date.now() / 1000);
   
   // Try to extract timestamps
@@ -201,14 +214,21 @@ function parseGtfsRtFallback(buffer: ArrayBuffer): ParsedTripUpdate[] {
   const futureTimestamps = uniqueTimestamps.filter(t => t > now);
   
   for (let i = 0; i < uniqueTrains.length && i < 12; i++) {
+    const trainId = uniqueTrains[i];
     const timestamp = futureTimestamps[i] || null;
+    const status = trainStatuses.get(trainId) || "On-Time";
+    
+    // Only mark as delayed if this specific train is Late
+    // Don't assume delay amount - just mark as slightly delayed if Late
+    const isLate = status === "Late" || status === "Delayed";
+    
     updates.push({
-      tripId: uniqueTrains[i],
+      tripId: trainId,
       routeId: "harlem",
       stopId: "MVW",
       arrivalTime: timestamp,
       departureTime: timestamp,
-      delay: hasLate ? 300 : 0,
+      delay: isLate ? 180 : 0, // 3 min if late (conservative), 0 if on-time
     });
   }
   
