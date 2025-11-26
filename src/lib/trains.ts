@@ -19,11 +19,16 @@ export interface TrainDeparture {
   line: string;
 }
 
+export interface TrainApiResponse {
+  departures: TrainDeparture[];
+  error?: string;
+  isLive: boolean;
+}
+
 // Simple protobuf parser for GTFS-RT TripUpdate messages
 // GTFS-RT uses protobuf format, we'll parse the essential fields
 function parseGtfsRtFeed(buffer: ArrayBuffer): any[] {
   try {
-    const view = new DataView(buffer);
     const entities: any[] = [];
     
     // This is a simplified parser - for production, use a proper protobuf library
@@ -48,13 +53,17 @@ function parseGtfsRtFeed(buffer: ArrayBuffer): any[] {
 }
 
 // Get departures from Mount Vernon West using MTA GTFS-RT
-export async function getTrainDepartures(): Promise<TrainDeparture[]> {
-  try {
-    if (!MTA_API_KEY) {
-      console.log("No MTA API key, using demo data");
-      return getDemoTrainDepartures();
-    }
+export async function getTrainDepartures(): Promise<TrainApiResponse> {
+  // Check for API key
+  if (!MTA_API_KEY) {
+    return {
+      departures: [],
+      error: "MTA API key not configured. Please contact Alex at owntheclimb.com",
+      isLive: false,
+    };
+  }
 
+  try {
     const response = await fetch(GTFS_RT_URL, {
       headers: {
         "x-api-key": MTA_API_KEY,
@@ -65,14 +74,22 @@ export async function getTrainDepartures(): Promise<TrainDeparture[]> {
 
     if (!response.ok) {
       console.error("GTFS-RT API error:", response.status);
-      return getDemoTrainDepartures();
+      return {
+        departures: [],
+        error: `MTA API returned error ${response.status}. Please contact Alex at owntheclimb.com`,
+        isLive: false,
+      };
     }
 
     const buffer = await response.arrayBuffer();
     const entities = parseGtfsRtFeed(buffer);
 
     if (entities.length === 0) {
-      return getDemoTrainDepartures();
+      return {
+        departures: [],
+        error: "No train data available from MTA. Please contact Alex at owntheclimb.com",
+        isLive: false,
+      };
     }
 
     // Build departures from parsed entities
@@ -109,44 +126,26 @@ export async function getTrainDepartures(): Promise<TrainDeparture[]> {
       minuteOffset += 12 + Math.floor(Math.random() * 8);
     }
 
-    return departures.length > 0 ? departures : getDemoTrainDepartures();
+    if (departures.length === 0) {
+      return {
+        departures: [],
+        error: "Could not parse train schedule. Please contact Alex at owntheclimb.com",
+        isLive: false,
+      };
+    }
+
+    return {
+      departures,
+      isLive: true,
+    };
   } catch (error) {
     console.error("Error fetching train departures:", error);
-    return getDemoTrainDepartures();
-  }
-}
-
-// Demo data for development/fallback
-function getDemoTrainDepartures(): TrainDeparture[] {
-  const now = new Date();
-  
-  const trains = [
-    { mins: 5, dest: "Grand Central Terminal", train: "421", track: "1", line: "Hudson Line" },
-    { mins: 18, dest: "Grand Central Terminal", train: "423", track: "2", line: "Hudson Line" },
-    { mins: 32, dest: "Poughkeepsie", train: "845", track: "1", line: "Hudson Line" },
-    { mins: 45, dest: "Grand Central Terminal", train: "425", track: null, line: "Hudson Line" },
-    { mins: 58, dest: "Croton-Harmon", train: "847", track: null, line: "Hudson Line" },
-    { mins: 72, dest: "Grand Central Terminal", train: "427", track: null, line: "Hudson Line" },
-  ];
-
-  return trains.map((t, i) => {
-    const depTime = new Date(now.getTime() + t.mins * 60000);
-    const isDelayed = i === 2;
-    
     return {
-      id: `demo-${t.train}`,
-      trainNumber: t.train,
-      destination: t.dest,
-      departureTime: depTime.toISOString(),
-      scheduledTime: isDelayed
-        ? new Date(depTime.getTime() - 8 * 60000).toISOString()
-        : depTime.toISOString(),
-      track: t.track,
-      status: isDelayed ? "delayed" : "on-time",
-      delayMinutes: isDelayed ? 8 : 0,
-      line: t.line,
+      departures: [],
+      error: "Failed to connect to MTA API. Please contact Alex at owntheclimb.com",
+      isLive: false,
     };
-  });
+  }
 }
 
 export interface StationInfo {

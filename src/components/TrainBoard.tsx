@@ -3,8 +3,14 @@
 import { useState, useEffect } from "react";
 import type { TrainDeparture } from "@/lib/trains";
 
+interface TrainApiResponse {
+  departures: TrainDeparture[];
+  error?: string;
+  isLive: boolean;
+}
+
 export default function TrainBoard() {
-  const [departures, setDepartures] = useState<TrainDeparture[]>([]);
+  const [data, setData] = useState<TrainApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -12,12 +18,27 @@ export default function TrainBoard() {
     try {
       const response = await fetch("/api/trains");
       if (response.ok) {
-        const data = await response.json();
-        setDepartures(data.departures || []);
+        const result = await response.json();
+        setData({
+          departures: result.departures || [],
+          error: result.error,
+          isLive: result.isLive,
+        });
         setLastUpdated(new Date());
+      } else {
+        setData({
+          departures: [],
+          error: "Failed to connect. Please contact Alex at owntheclimb.com",
+          isLive: false,
+        });
       }
     } catch (error) {
       console.error("Error fetching trains:", error);
+      setData({
+        departures: [],
+        error: "Connection failed. Please contact Alex at owntheclimb.com",
+        isLive: false,
+      });
     } finally {
       setLoading(false);
     }
@@ -58,119 +79,148 @@ export default function TrainBoard() {
           <h2 className="text-lg font-bold text-white">Metro-North Railroad</h2>
           <p className="text-sm text-slate-400">Mount Vernon West • Hudson Line</p>
         </div>
-        {lastUpdated && (
-          <span className="text-xs text-slate-500 font-mono bg-slate-800/50 px-2 py-1 rounded">
-            {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {data?.isLive ? (
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-green-400 bg-green-500/10 px-2 py-1 rounded border border-green-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              LIVE
+            </span>
+          ) : data && !loading ? (
+            <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">
+              OFFLINE
+            </span>
+          ) : null}
+          {lastUpdated && (
+            <span className="text-xs text-slate-500 font-mono bg-slate-800/50 px-2 py-1 rounded">
+              {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Table Header */}
-      <div className="grid grid-cols-12 gap-3 px-4 py-2.5 mb-1 table-header border-b border-white/5">
-        <div className="col-span-1">Train</div>
-        <div className="col-span-4">Destination</div>
-        <div className="col-span-2 text-center">Departs</div>
-        <div className="col-span-2 text-center">Time</div>
-        <div className="col-span-1 text-center">Trk</div>
-        <div className="col-span-2 text-right">Status</div>
-      </div>
-
-      {/* Departures List */}
-      <div className="flex-1 overflow-hidden space-y-1.5">
-        {loading && departures.length === 0 ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="flex items-center gap-3 text-slate-400">
-              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      {/* Error State */}
+      {data?.error ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <span className="text-sm">Loading departures...</span>
             </div>
+            <p className="text-red-400 font-semibold mb-2">Train Data Unavailable</p>
+            <p className="text-slate-400 text-sm">{data.error}</p>
           </div>
-        ) : departures.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-slate-500">
-            No upcoming departures
+        </div>
+      ) : (
+        <>
+          {/* Table Header */}
+          <div className="grid grid-cols-12 gap-3 px-4 py-2.5 mb-1 table-header border-b border-white/5">
+            <div className="col-span-1">Train</div>
+            <div className="col-span-4">Destination</div>
+            <div className="col-span-2 text-center">Departs</div>
+            <div className="col-span-2 text-center">Time</div>
+            <div className="col-span-1 text-center">Trk</div>
+            <div className="col-span-2 text-right">Status</div>
           </div>
-        ) : (
-          departures.slice(0, 6).map((departure, index) => {
-            const minutes = getMinutesUntil(departure.departureTime);
-            const isImminent = minutes <= 5;
-            const isFeatured = index === 0;
 
-            return (
-              <div
-                key={departure.id}
-                className={`departure-row grid grid-cols-12 gap-3 items-center animate-slide-in ${
-                  isFeatured ? "featured" : ""
-                } ${departure.status === "cancelled" ? "opacity-40" : ""}`}
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                {/* Train Number */}
-                <div className="col-span-1">
-                  <span className="route-badge route-badge-train">
-                    {departure.trainNumber}
-                  </span>
-                </div>
-
-                {/* Destination */}
-                <div className="col-span-4">
-                  <div className="text-base font-semibold text-white truncate">
-                    {departure.destination}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-0.5">{departure.line}</div>
-                </div>
-
-                {/* Departure Time */}
-                <div className="col-span-2 text-center">
-                  <span className="font-mono text-sm text-slate-300">
-                    {formatTime(departure.departureTime)}
-                  </span>
-                </div>
-
-                {/* Minutes */}
-                <div className="col-span-2 text-center">
-                  <span className={`minutes-display text-xl font-bold ${
-                    isImminent ? "minutes-imminent" : "text-white"
-                  }`}>
-                    {minutes}
-                  </span>
-                  <span className="text-xs text-slate-500 ml-1">min</span>
-                </div>
-
-                {/* Track */}
-                <div className="col-span-1 flex justify-center">
-                  {departure.track ? (
-                    <span className="track-display">{departure.track}</span>
-                  ) : (
-                    <span className="text-slate-600 text-sm">—</span>
-                  )}
-                </div>
-
-                {/* Status */}
-                <div className="col-span-2 flex justify-end">
-                  {departure.status === "on-time" ? (
-                    <span className="status-badge status-ontime">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      On Time
-                    </span>
-                  ) : departure.status === "delayed" ? (
-                    <span className="status-badge status-delayed">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      +{departure.delayMinutes}m
-                    </span>
-                  ) : (
-                    <span className="text-sm text-slate-500">—</span>
-                  )}
+          {/* Departures List */}
+          <div className="flex-1 overflow-hidden space-y-1.5">
+            {loading ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="flex items-center gap-3 text-slate-400">
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  <span className="text-sm">Loading departures...</span>
                 </div>
               </div>
-            );
-          })
-        )}
-      </div>
+            ) : data?.departures.length === 0 ? (
+              <div className="flex items-center justify-center h-32 text-slate-500">
+                No upcoming departures
+              </div>
+            ) : (
+              data?.departures.slice(0, 6).map((departure, index) => {
+                const minutes = getMinutesUntil(departure.departureTime);
+                const isImminent = minutes <= 5;
+                const isFeatured = index === 0;
+
+                return (
+                  <div
+                    key={departure.id}
+                    className={`departure-row grid grid-cols-12 gap-3 items-center animate-slide-in ${
+                      isFeatured ? "featured" : ""
+                    } ${departure.status === "cancelled" ? "opacity-40" : ""}`}
+                    style={{ animationDelay: `${index * 0.05}s` }}
+                  >
+                    {/* Train Number */}
+                    <div className="col-span-1">
+                      <span className="route-badge route-badge-train">
+                        {departure.trainNumber}
+                      </span>
+                    </div>
+
+                    {/* Destination */}
+                    <div className="col-span-4">
+                      <div className="text-base font-semibold text-white truncate">
+                        {departure.destination}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">{departure.line}</div>
+                    </div>
+
+                    {/* Departure Time */}
+                    <div className="col-span-2 text-center">
+                      <span className="font-mono text-sm text-slate-300">
+                        {formatTime(departure.departureTime)}
+                      </span>
+                    </div>
+
+                    {/* Minutes */}
+                    <div className="col-span-2 text-center">
+                      <span className={`minutes-display text-xl font-bold ${
+                        isImminent ? "minutes-imminent" : "text-white"
+                      }`}>
+                        {minutes}
+                      </span>
+                      <span className="text-xs text-slate-500 ml-1">min</span>
+                    </div>
+
+                    {/* Track */}
+                    <div className="col-span-1 flex justify-center">
+                      {departure.track ? (
+                        <span className="track-display">{departure.track}</span>
+                      ) : (
+                        <span className="text-slate-600 text-sm">—</span>
+                      )}
+                    </div>
+
+                    {/* Status */}
+                    <div className="col-span-2 flex justify-end">
+                      {departure.status === "on-time" ? (
+                        <span className="status-badge status-ontime">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          On Time
+                        </span>
+                      ) : departure.status === "delayed" ? (
+                        <span className="status-badge status-delayed">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          +{departure.delayMinutes}m
+                        </span>
+                      ) : (
+                        <span className="text-sm text-slate-500">—</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
