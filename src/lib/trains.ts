@@ -60,10 +60,10 @@ function parseGtfsRtFeed(buffer: ArrayBuffer): { tripId: string; status: string 
     }
     
     // Convert to entities
-    for (const tripId of trainNumbers) {
-      if (entities.length >= 12) break;
+    const trainArray = Array.from(trainNumbers);
+    for (let i = 0; i < trainArray.length && entities.length < 12; i++) {
       entities.push({
-        tripId,
+        tripId: trainArray[i],
         status: hasLate ? "Late" : (hasOnTime ? "On-Time" : "Unknown"),
       });
     }
