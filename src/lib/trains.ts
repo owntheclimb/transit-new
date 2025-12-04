@@ -145,6 +145,7 @@ interface StopTimeUpdate {
 }
 
 interface TripData {
+  entityId: string;  // This is the actual train number!
   tripId: string;
   routeId: string;
   stopTimeUpdates: StopTimeUpdate[];
@@ -169,6 +170,7 @@ function parseGtfsRtFeed(buffer: ArrayBuffer): TripData[] {
     const tripUpdate = entity.tripUpdate;
     if (!tripUpdate) continue;
     
+    const entityId = entity.id || "";  // This is the actual train number!
     const tripId = tripUpdate.trip?.tripId || "";
     const routeId = tripUpdate.trip?.routeId || "";
     
@@ -191,6 +193,7 @@ function parseGtfsRtFeed(buffer: ArrayBuffer): TripData[] {
     }
     
     trips.push({
+      entityId,
       tripId,
       routeId,
       stopTimeUpdates,
@@ -289,9 +292,8 @@ export async function getTrainDepartures(): Promise<TrainApiResponse> {
       const finalStop = trip.stopTimeUpdates[trip.stopTimeUpdates.length - 1];
       const destination = HARLEM_LINE_STATIONS[finalStop.stopId] || `Station ${finalStop.stopId}`;
       
-      // Extract a display-friendly train number from tripId
-      // Trip IDs are like "2924947" - we'll show last 3-4 digits
-      const trainNumber = trip.tripId.slice(-4);
+      // Entity ID is the actual train number shown on schedules
+      const trainNumber = trip.entityId;
       
       departures.push({
         id: `mnr-${trip.tripId}-${depTimeUnix}`,
