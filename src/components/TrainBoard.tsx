@@ -132,11 +132,10 @@ export default function TrainBoard() {
         <>
           {/* Table Header */}
           <div className="grid grid-cols-12 gap-2 table-header">
-            <div className="col-span-1">Train</div>
+            <div className="col-span-2">Train</div>
             <div className="col-span-4">Destination</div>
             <div className="col-span-2 text-center">Scheduled</div>
             <div className="col-span-2 text-center">In</div>
-            <div className="col-span-1 text-center">Track</div>
             <div className="col-span-2 text-right">Status</div>
           </div>
 
@@ -168,7 +167,7 @@ export default function TrainBoard() {
                     style={{ animationDelay: `${index * 0.05}s` }}
                   >
                     {/* Train Number */}
-                    <div className="col-span-1">
+                    <div className="col-span-2">
                       <span className="route-badge route-badge-train">
                         {departure.trainNumber}
                       </span>
@@ -199,15 +198,6 @@ export default function TrainBoard() {
                         {minutes}
                       </span>
                       <span className="text-xs text-[var(--color-text-muted)] ml-1">min</span>
-                    </div>
-
-                    {/* Track */}
-                    <div className="col-span-1 flex justify-center">
-                      {departure.track ? (
-                        <span className="track-badge">{departure.track}</span>
-                      ) : (
-                        <span className="text-[var(--color-text-muted)] text-sm">—</span>
-                      )}
                     </div>
 
                     {/* Status */}
