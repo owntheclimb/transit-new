@@ -34,22 +34,22 @@ export default function TransitDisplay() {
         </div>
       </header>
 
-      {/* Main Content Grid - Takes remaining space */}
+      {/* Main Content Grid - 3 Panels */}
       <div className="flex-1 grid grid-cols-12 gap-3 min-h-0 mt-3">
-        {/* Train Board - Left Panel */}
-        <div className="col-span-7 min-h-0 overflow-hidden">
+        {/* Train Board - Left Panel (larger) */}
+        <div className="col-span-5 min-h-0 overflow-hidden">
           <TrainBoard />
         </div>
 
-        {/* Bus Board - Right Panel */}
-        <div className="col-span-5 min-h-0 overflow-hidden">
+        {/* Bus Board - Middle Panel */}
+        <div className="col-span-4 min-h-0 overflow-hidden">
           <BusBoard />
         </div>
-      </div>
 
-      {/* Notices Ticker - Bottom */}
-      <div className="flex-shrink-0 mt-3">
-        <NoticesPanel />
+        {/* Notices Panel - Right Panel */}
+        <div className="col-span-3 min-h-0 overflow-hidden">
+          <NoticesPanel />
+        </div>
       </div>
 
       {/* Footer - Minimal */}
