@@ -275,78 +275,46 @@ body {
   font-weight: 600;
 }
 
-/* Notice Board - Clean box with large text */
-.notice-board {
+/* Announcement Box - Just content, no header */
+.announcement-box {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 16px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  overflow: hidden;
-}
-
-.notice-board-header {
+  padding: 28px 36px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  justify-content: center;
+  min-height: 100px;
 }
 
-.notice-board-header svg {
-  width: 20px;
-  height: 20px;
-  color: var(--color-primary);
-}
-
-.notice-board-header span:first-of-type {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-text);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.notice-board-counter {
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-}
-
-.notice-board-content {
-  padding: 24px 28px;
-  min-height: 80px;
-  display: flex;
-  align-items: center;
-}
-
-.notice-board-text {
-  font-size: 20px;
+.announcement-content {
+  font-size: 22px;
   line-height: 1.5;
-  color: var(--color-text);
-  animation: notice-fade 0.4s ease-out;
+  text-align: center;
+  animation: announcement-fade 0.5s ease-out;
 }
 
-.notice-board-title {
+.announcement-title {
   font-weight: 700;
   color: var(--color-text);
 }
 
-.notice-board-separator {
-  margin: 0 12px;
+.announcement-dash {
+  margin: 0 14px;
   color: var(--color-text-muted);
 }
 
-.notice-board-body {
+.announcement-body {
   font-weight: 400;
   color: var(--color-text-secondary);
 }
 
-@keyframes notice-fade {
+@keyframes announcement-fade {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -354,31 +322,25 @@ body {
   }
 }
 
-.notice-board-dots {
+.announcement-dots {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  padding: 0 20px 16px;
+  gap: 6px;
+  margin-top: 16px;
 }
 
-.notice-dot {
-  width: 8px;
-  height: 8px;
+.announcement-dot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--color-border);
-  border: none;
-  cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.notice-dot:hover {
-  background: var(--color-text-muted);
-}
-
-.notice-dot.active {
+.announcement-dot.active {
   background: var(--color-primary);
-  width: 24px;
-  border-radius: 4px;
+  width: 18px;
+  border-radius: 3px;
 }
 
 /* Weather widget */
