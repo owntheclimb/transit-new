@@ -91,16 +91,16 @@ export default function TrainBoard() {
 
   return (
     <div className="card-elevated h-full flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="section-header">
-        <div className="section-icon">
-          <TrainIcon className="w-5 h-5" />
+      {/* Header - Compact */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]">
+        <div className="w-9 h-9 rounded-lg bg-[var(--color-primary)] flex items-center justify-center flex-shrink-0">
+          <TrainIcon className="w-5 h-5 text-white" />
         </div>
-        <div className="flex-1">
-          <h2 className="text-lg font-bold text-[var(--color-text)]">Metro-North Railroad</h2>
-          <p className="text-sm text-[var(--color-text-secondary)]">Mount Vernon West • Harlem Line</p>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-base font-bold text-[var(--color-text)] leading-tight">Metro-North Railroad</h2>
+          <p className="text-xs text-[var(--color-text-secondary)]">Mount Vernon West • Harlem Line</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {data?.isLive ? (
             <div className="live-indicator">
               <div className="live-dot" />
@@ -109,51 +109,46 @@ export default function TrainBoard() {
           ) : data && !loading ? (
             <span className="status-badge status-delayed">Offline</span>
           ) : null}
-          {lastUpdated && (
-            <span className="text-xs text-[var(--color-text-muted)] font-mono">
-              {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          )}
         </div>
       </div>
 
       {/* Error State */}
       {data?.error && departures.length === 0 ? (
-        <div className="error-state flex-1">
-          <div className="error-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor">
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center mb-3">
+            <svg className="w-5 h-5 text-[var(--color-accent-red)]" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
             </svg>
           </div>
-          <div className="error-title">Train Data Unavailable</div>
-          <div className="error-message">{data.error}</div>
+          <div className="text-sm font-semibold text-[var(--color-text)]">Train Data Unavailable</div>
+          <div className="text-xs text-[var(--color-text-muted)] mt-1">{data.error}</div>
         </div>
       ) : (
         <>
-          {/* Table Header */}
-          <div className="grid grid-cols-12 gap-2 table-header">
+          {/* Table Header - Compact */}
+          <div className="grid grid-cols-12 gap-2 px-4 py-2 text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide border-b border-[var(--color-border)] bg-[var(--color-surface)]">
             <div className="col-span-2">Train</div>
             <div className="col-span-4">Destination</div>
-            <div className="col-span-2 text-center">Scheduled</div>
+            <div className="col-span-2 text-center">Departs</div>
             <div className="col-span-2 text-center">In</div>
             <div className="col-span-2 text-right">Status</div>
           </div>
 
-          {/* Departures List */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {/* Departures List - Compact rows, max 6 */}
+          <div className="flex-1 overflow-hidden">
             {loading ? (
-              <div className="flex items-center justify-center h-32">
-                <div className="flex items-center gap-3 text-[var(--color-text-muted)]">
+              <div className="flex items-center justify-center h-24">
+                <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
                   <div className="loading-spinner" />
-                  <span className="text-sm">Loading train departures...</span>
+                  <span className="text-xs">Loading...</span>
                 </div>
               </div>
             ) : departures.length === 0 ? (
-              <div className="empty-state h-32">
-                <span className="text-sm">No upcoming departures</span>
+              <div className="flex items-center justify-center h-24 text-xs text-[var(--color-text-muted)]">
+                No upcoming departures
               </div>
             ) : (
-              departures.slice(0, 8).map((departure, index) => {
+              departures.slice(0, 6).map((departure, index) => {
                 const minutes = getMinutesUntil(departure.departureTime);
                 const isImminent = minutes <= 5;
                 const isFeatured = index === 0;
@@ -161,63 +156,59 @@ export default function TrainBoard() {
                 return (
                   <div
                     key={departure.id}
-                    className={`table-row grid grid-cols-12 gap-2 animate-fade-in ${
-                      isFeatured ? "table-row-featured" : ""
+                    className={`grid grid-cols-12 gap-2 items-center px-4 py-2.5 border-b border-[var(--color-border)] last:border-b-0 ${
+                      isFeatured ? "bg-[var(--color-primary)]/[0.03]" : ""
                     } ${departure.status === "cancelled" ? "opacity-50" : ""}`}
-                    style={{ animationDelay: `${index * 0.05}s` }}
                   >
                     {/* Train Number */}
                     <div className="col-span-2">
-                      <span className="route-badge route-badge-train">
+                      <span className="inline-flex items-center justify-center px-2 py-1 rounded bg-[var(--color-primary)] text-white text-xs font-bold min-w-[44px]">
                         {departure.trainNumber}
                       </span>
                     </div>
 
                     {/* Destination */}
                     <div className="col-span-4">
-                      <div className="text-base font-semibold text-[var(--color-text)] truncate">
+                      <div className="text-sm font-semibold text-[var(--color-text)] truncate">
                         {departure.destination}
                       </div>
-                      <div className="text-xs text-[var(--color-text-muted)]">
+                      <div className="text-[10px] text-[var(--color-text-muted)]">
                         {departure.line} Line
                       </div>
                     </div>
 
                     {/* Scheduled Time */}
                     <div className="col-span-2 text-center">
-                      <span className="time-display text-sm text-[var(--color-text-secondary)]">
+                      <span className="font-mono text-xs text-[var(--color-text-secondary)]">
                         {formatTime(departure.scheduledTime)}
                       </span>
                     </div>
 
                     {/* Minutes Until Departure */}
                     <div className="col-span-2 text-center">
-                      <span className={`minutes-display text-xl font-bold ${
-                        isImminent ? "time-imminent" : "text-[var(--color-text)]"
+                      <span className={`font-mono text-lg font-bold ${
+                        isImminent ? "text-[var(--color-accent-orange)]" : "text-[var(--color-text)]"
                       }`}>
                         {minutes}
                       </span>
-                      <span className="text-xs text-[var(--color-text-muted)] ml-1">min</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)] ml-0.5">min</span>
                     </div>
 
                     {/* Status */}
                     <div className="col-span-2 flex justify-end">
                       {departure.status === "on-time" ? (
-                        <span className="status-badge status-ontime">
-                          <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-[10px] font-semibold border border-green-200">
+                          <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                           On Time
                         </span>
                       ) : departure.status === "delayed" && departure.delayMinutes > 0 ? (
-                        <span className="status-badge status-delayed">
-                          <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                          +{departure.delayMinutes} min
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-700 text-[10px] font-semibold border border-red-200">
+                          +{departure.delayMinutes}m
                         </span>
                       ) : (
-                        <span className="text-sm text-[var(--color-text-muted)]">—</span>
+                        <span className="text-xs text-[var(--color-text-muted)]">—</span>
                       )}
                     </div>
                   </div>

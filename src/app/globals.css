@@ -259,34 +259,35 @@ body {
   }
 }
 
-/* Clock styling */
+/* Clock styling - Compact for lobby display */
 .clock-time {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 600;
   color: var(--color-text);
   letter-spacing: -0.02em;
 }
 
 .clock-date {
-  font-size: 14px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   font-weight: 500;
 }
 
-/* Notice ticker */
+/* Notice ticker - Large and slow for lobby display */
 .notice-ticker {
   overflow: hidden;
   white-space: nowrap;
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .notice-ticker-content {
   display: inline-flex;
-  animation: ticker-scroll 30s linear infinite;
-  padding: 12px 0;
+  animation: ticker-scroll 60s linear infinite;
+  padding: 16px 0;
 }
 
 .notice-ticker-content:hover {
@@ -305,18 +306,31 @@ body {
 .notice-item {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 48px;
-  font-size: 14px;
-  color: var(--color-text);
+  gap: 14px;
+  padding: 0 60px;
+  font-size: 20px;
+  font-weight: 500;
+  color: white;
+}
+
+.notice-item svg {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .notice-item-high {
-  color: var(--color-accent-red);
+  color: #fca5a5;
+}
+
+.notice-item-high svg {
+  color: #fca5a5;
 }
 
 .notice-item-medium {
-  color: var(--color-accent-orange);
+  color: #fde68a;
+}
+
+.notice-item-medium svg {
+  color: #fde68a;
 }
 
 .notice-separator {
