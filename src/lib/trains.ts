@@ -1,5 +1,5 @@
 // Metro-North Train Data - Mount Vernon West (Harlem Line)
-// Uses MTA GTFS-RT feed with proper protobuf parsing
+// Uses MTA GTFS-RT feed - NO MOCK DATA EVER
 
 import * as protobuf from "protobufjs";
 
@@ -7,16 +7,51 @@ const MTA_API_KEY = process.env.MTA_API_KEY || "";
 const GTFS_RT_URL = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/mnr%2Fgtfs-mnr";
 
 // Request timeout in milliseconds
-const API_TIMEOUT = 8000;
+const API_TIMEOUT = 10000;
 
-// Mount Vernon West stop IDs in MTA GTFS
-// The station has multiple stop IDs for different directions/tracks
-const MOUNT_VERNON_WEST_STOP_IDS = new Set([
-  "1", // Main stop ID
-  "56", // Alternative ID
-  "110", // Possible ID
-  "MVW", // Code-based ID
-]);
+// Mount Vernon West is stop_id 62 on the Harlem Line (stop_code: 1MW)
+const MOUNT_VERNON_WEST_STOP_ID = "62";
+
+// Harlem Line station mapping for destinations
+const HARLEM_LINE_STATIONS: Record<string, string> = {
+  "1": "Grand Central",
+  "4": "Harlem-125 St",
+  "54": "Melrose",
+  "55": "Tremont",
+  "56": "Fordham",
+  "57": "Botanical Garden",
+  "58": "Williams Bridge",
+  "59": "Woodlawn",
+  "61": "Wakefield",
+  "62": "Mt Vernon West",
+  "64": "Fleetwood",
+  "65": "Bronxville",
+  "66": "Tuckahoe",
+  "68": "Crestwood",
+  "71": "Scarsdale",
+  "72": "Hartsdale",
+  "74": "White Plains",
+  "76": "North White Plains",
+  "78": "Valhalla",
+  "79": "Mt Pleasant",
+  "80": "Hawthorne",
+  "81": "Pleasantville",
+  "83": "Chappaqua",
+  "84": "Mt Kisco",
+  "85": "Bedford Hills",
+  "86": "Katonah",
+  "88": "Goldens Bridge",
+  "89": "Purdy's",
+  "90": "Croton Falls",
+  "91": "Brewster",
+  "94": "Southeast",
+  "97": "Patterson",
+  "98": "Pawling",
+  "99": "Appalachian Trail",
+  "100": "Harlem Valley-Wingdale",
+  "101": "Dover Plains",
+  "177": "Wassaic",
+};
 
 export interface TrainDeparture {
   id: string;
@@ -37,7 +72,7 @@ export interface TrainApiResponse {
   dataSource?: string;
 }
 
-// GTFS-RT proto definition as JSON (simplified for use without .proto file)
+// GTFS-RT proto definition
 const gtfsRealtimeProto = {
   nested: {
     transit_realtime: {
@@ -103,18 +138,23 @@ async function getProtoRoot(): Promise<protobuf.Root> {
   return protoRoot;
 }
 
-interface ParsedTripUpdate {
-  tripId: string;
-  routeId: string;
+interface StopTimeUpdate {
   stopId: string;
+  stopSequence: number;
   arrivalTime: number | null;
   departureTime: number | null;
   delay: number;
 }
 
-// Parse GTFS-RT protobuf feed properly
-async function parseGtfsRtFeed(buffer: ArrayBuffer): Promise<ParsedTripUpdate[]> {
-  const updates: ParsedTripUpdate[] = [];
+interface TripData {
+  tripId: string;
+  routeId: string;
+  stopTimeUpdates: StopTimeUpdate[];
+}
+
+// Parse GTFS-RT protobuf feed
+async function parseGtfsRtFeed(buffer: ArrayBuffer): Promise<TripData[]> {
+  const trips: TripData[] = [];
   
   try {
     const root = await getProtoRoot();
@@ -126,7 +166,7 @@ async function parseGtfsRtFeed(buffer: ArrayBuffer): Promise<ParsedTripUpdate[]>
       defaults: true,
     });
     
-    if (!feed.entity) return updates;
+    if (!feed.entity) return trips;
     
     for (const entity of feed.entity) {
       const tripUpdate = entity.tripUpdate;
@@ -137,128 +177,51 @@ async function parseGtfsRtFeed(buffer: ArrayBuffer): Promise<ParsedTripUpdate[]>
       
       if (!tripUpdate.stopTimeUpdate) continue;
       
-      for (const stopTimeUpdate of tripUpdate.stopTimeUpdate) {
-        const stopId = stopTimeUpdate.stopId || "";
-        const arrival = stopTimeUpdate.arrival || {};
-        const departure = stopTimeUpdate.departure || {};
+      const stopTimeUpdates: StopTimeUpdate[] = [];
+      
+      for (const stu of tripUpdate.stopTimeUpdate) {
+        const stopId = stu.stopId || "";
+        const arrival = stu.arrival || {};
+        const departure = stu.departure || {};
         
-        updates.push({
-          tripId,
-          routeId,
+        stopTimeUpdates.push({
           stopId,
+          stopSequence: stu.stopSequence || 0,
           arrivalTime: arrival.time || null,
           departureTime: departure.time || null,
           delay: arrival.delay || departure.delay || 0,
         });
       }
+      
+      trips.push({
+        tripId,
+        routeId,
+        stopTimeUpdates,
+      });
     }
   } catch (error) {
     console.error("Error parsing GTFS-RT protobuf:", error);
-    // Fall back to text-based parsing if protobuf fails
-    return parseGtfsRtFallback(buffer);
+    throw error; // Don't silently fail - propagate the error
   }
   
-  return updates;
+  return trips;
 }
 
-// Fallback parser if protobuf parsing fails
-function parseGtfsRtFallback(buffer: ArrayBuffer): ParsedTripUpdate[] {
-  const updates: ParsedTripUpdate[] = [];
-  const bytes = new Uint8Array(buffer);
+// Determine destination based on the final stop in the trip
+function getTrainDestination(trip: TripData, ourStopSequence: number): string {
+  // Find the last stop in the trip (highest stopSequence after our stop)
+  const futureStops = trip.stopTimeUpdates
+    .filter(stu => stu.stopSequence > ourStopSequence)
+    .sort((a, b) => b.stopSequence - a.stopSequence);
   
-  // Convert to text for pattern matching
-  let text = "";
-  for (let i = 0; i < bytes.length; i++) {
-    const char = bytes[i];
-    if (char >= 32 && char <= 126) {
-      text += String.fromCharCode(char);
-    } else {
-      text += " ";
-    }
+  if (futureStops.length > 0) {
+    const finalStopId = futureStops[0].stopId;
+    return HARLEM_LINE_STATIONS[finalStopId] || `Station ${finalStopId}`;
   }
   
-  // Extract train IDs with their associated status
-  // Pattern: train number followed by status within ~50 chars
-  const trainStatusPattern = /\b([1-9]\d{2,3})\b[^0-9]{0,50}(On-Time|Late|Delayed|Early)/g;
-  const trainStatuses: Map<string, string> = new Map();
-  
-  let match;
-  while ((match = trainStatusPattern.exec(text)) !== null) {
-    const trainNum = match[1];
-    const status = match[2];
-    const num = parseInt(trainNum);
-    if (num >= 100 && num <= 1999) {
-      trainStatuses.set(trainNum, status);
-    }
-  }
-  
-  // Also get trains without status (default to On-Time)
-  const allTrainMatches = text.match(/\b([1-9]\d{2,3})\b/g) || [];
-  const uniqueTrains = Array.from(new Set(allTrainMatches)).filter(num => {
-    const n = parseInt(num);
-    return n >= 100 && n <= 1999;
-  });
-  
-  const now = Math.floor(Date.now() / 1000);
-  
-  // Try to extract timestamps
-  const timestamps: number[] = [];
-  for (let i = 0; i < bytes.length - 4; i++) {
-    const val = bytes[i] | (bytes[i + 1] << 8) | (bytes[i + 2] << 16) | (bytes[i + 3] << 24);
-    if (val > now - 300 && val < now + 7200) {
-      timestamps.push(val);
-    }
-  }
-  
-  const uniqueTimestamps = Array.from(new Set(timestamps)).sort((a, b) => a - b);
-  const futureTimestamps = uniqueTimestamps.filter(t => t > now);
-  
-  for (let i = 0; i < uniqueTrains.length && i < 12; i++) {
-    const trainId = uniqueTrains[i];
-    const timestamp = futureTimestamps[i] || null;
-    const status = trainStatuses.get(trainId) || "On-Time";
-    
-    // Only mark as delayed if this specific train is Late
-    // Don't assume delay amount - just mark as slightly delayed if Late
-    const isLate = status === "Late" || status === "Delayed";
-    
-    updates.push({
-      tripId: trainId,
-      routeId: "harlem",
-      stopId: "MVW",
-      arrivalTime: timestamp,
-      departureTime: timestamp,
-      delay: isLate ? 180 : 0, // 3 min if late (conservative), 0 if on-time
-    });
-  }
-  
-  return updates;
-}
-
-// Determine destination based on Metro-North Harlem Line patterns
-function getTrainDestination(tripId: string, routeId: string): { destination: string; line: string } {
-  const num = parseInt(tripId) || 0;
-  
-  // Harlem Line terminals
-  const GRAND_CENTRAL = "Grand Central Terminal";
-  const WASSAIC = "Wassaic";
-  const SOUTHEAST = "Southeast";
-  const NORTH_WHITE_PLAINS = "North White Plains";
-  
-  // Peak express trains (typically even = southbound, odd = northbound)
-  // But Metro-North patterns vary by time of day
-  if (num % 2 === 0) {
-    return { destination: GRAND_CENTRAL, line: "Harlem Line" };
-  } else {
-    // Odd numbered - going north
-    // Different trains terminate at different stations
-    if (num >= 800 && num < 900) {
-      return { destination: NORTH_WHITE_PLAINS, line: "Harlem Line" };
-    } else if (num >= 600 && num < 700) {
-      return { destination: WASSAIC, line: "Harlem Line" };
-    }
-    return { destination: SOUTHEAST, line: "Harlem Line" };
-  }
+  // If no future stops, train might be terminating at our station
+  // or heading to Grand Central
+  return "Grand Central";
 }
 
 // Fetch with timeout
@@ -285,7 +248,7 @@ export async function getTrainDepartures(): Promise<TrainApiResponse> {
   if (!MTA_API_KEY) {
     return {
       departures: [],
-      error: "MTA API key not configured. Contact Alex at owntheclimb.com",
+      error: "MTA API key not configured. Please add MTA_API_KEY to environment variables.",
       isLive: false,
     };
   }
@@ -306,7 +269,7 @@ export async function getTrainDepartures(): Promise<TrainApiResponse> {
     if (!response.ok) {
       return {
         departures: [],
-        error: `MTA API error ${response.status}. Contact Alex at owntheclimb.com`,
+        error: `MTA API returned status ${response.status}. Please check API key.`,
         isLive: false,
       };
     }
@@ -316,95 +279,86 @@ export async function getTrainDepartures(): Promise<TrainApiResponse> {
     if (buffer.byteLength === 0) {
       return {
         departures: [],
-        error: "Empty MTA response. Contact Alex at owntheclimb.com",
+        error: "MTA API returned empty response.",
         isLive: false,
       };
     }
 
-    const updates = await parseGtfsRtFeed(buffer);
+    const trips = await parseGtfsRtFeed(buffer);
 
-    if (updates.length === 0) {
+    if (trips.length === 0) {
       return {
         departures: [],
-        error: "No train data available. Contact Alex at owntheclimb.com",
+        error: "No trip data available from MTA feed.",
         isLive: false,
       };
     }
 
-    // Build departures from parsed data
+    // Find trips that stop at Mount Vernon West (stop_id 62)
     const now = Math.floor(Date.now() / 1000);
     const departures: TrainDeparture[] = [];
-    const seenTrips = new Set<string>();
-    
-    // Filter and sort updates
-    const relevantUpdates = updates
-      .filter(u => u.departureTime && u.departureTime > now)
-      .sort((a, b) => (a.departureTime || 0) - (b.departureTime || 0));
 
-    for (const update of relevantUpdates) {
-      if (departures.length >= 8) break;
-      if (seenTrips.has(update.tripId)) continue;
-      seenTrips.add(update.tripId);
-
-      const { destination, line } = getTrainDestination(update.tripId, update.routeId);
+    for (const trip of trips) {
+      // Find Mount Vernon West stop in this trip
+      const mvwStop = trip.stopTimeUpdates.find(
+        stu => stu.stopId === MOUNT_VERNON_WEST_STOP_ID
+      );
       
-      const depTimeUnix = update.departureTime || now + 600;
+      if (!mvwStop) continue;
+      
+      const depTimeUnix = mvwStop.departureTime || mvwStop.arrivalTime;
+      if (!depTimeUnix) continue;
+      
+      // Only include future departures (within next 2 hours)
+      if (depTimeUnix <= now || depTimeUnix > now + 7200) continue;
+      
       const depTime = new Date(depTimeUnix * 1000);
-      const delayMinutes = Math.round((update.delay || 0) / 60);
-      const isDelayed = delayMinutes > 2;
+      const delaySeconds = mvwStop.delay || 0;
+      const delayMinutes = Math.round(delaySeconds / 60);
+      const isDelayed = delayMinutes >= 2;
       
-      const scheduledTime = isDelayed 
-        ? new Date((depTimeUnix - delayMinutes * 60) * 1000)
-        : depTime;
-
+      const scheduledTimeUnix = depTimeUnix - delaySeconds;
+      const scheduledTime = new Date(scheduledTimeUnix * 1000);
+      
+      const destination = getTrainDestination(trip, mvwStop.stopSequence);
+      
       departures.push({
-        id: `mnr-${update.tripId}-${depTimeUnix}`,
-        trainNumber: update.tripId,
+        id: `mnr-${trip.tripId}-${depTimeUnix}`,
+        trainNumber: trip.tripId,
         destination,
         departureTime: depTime.toISOString(),
         scheduledTime: scheduledTime.toISOString(),
-        track: null,
+        track: null, // MTA GTFS-RT doesn't provide track info for Metro-North
         status: isDelayed ? "delayed" : "on-time",
         delayMinutes: Math.max(0, delayMinutes),
-        line,
+        line: "Harlem",
       });
     }
 
-    // If no future departures found from parsing, generate from trip IDs
-    if (departures.length === 0 && updates.length > 0) {
-      let minuteOffset = 5;
-      const uniqueTrips = Array.from(new Set(updates.map(u => u.tripId))).slice(0, 8);
-      
-      for (const tripId of uniqueTrips) {
-        const { destination, line } = getTrainDestination(tripId, "harlem");
-        const depTime = new Date(Date.now() + minuteOffset * 60000);
-        
-        departures.push({
-          id: `mnr-${tripId}-${Date.now()}`,
-          trainNumber: tripId,
-          destination,
-          departureTime: depTime.toISOString(),
-          scheduledTime: depTime.toISOString(),
-          track: null,
-          status: "on-time",
-          delayMinutes: 0,
-          line,
-        });
-        
-        minuteOffset += 12;
-      }
+    // Sort by departure time
+    departures.sort((a, b) => 
+      new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
+    );
+
+    if (departures.length === 0) {
+      return {
+        departures: [],
+        isLive: true,
+        dataSource: "MTA GTFS-RT",
+        error: "No upcoming trains at Mount Vernon West.",
+      };
     }
 
     return {
-      departures,
-      isLive: departures.length > 0,
+      departures: departures.slice(0, 10),
+      isLive: true,
       dataSource: "MTA GTFS-RT",
     };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       return {
         departures: [],
-        error: "MTA API timeout. Contact Alex at owntheclimb.com",
+        error: "MTA API request timed out.",
         isLive: false,
       };
     }
@@ -413,7 +367,7 @@ export async function getTrainDepartures(): Promise<TrainApiResponse> {
     console.error("Train API error:", errMsg);
     return {
       departures: [],
-      error: `Connection failed. Contact Alex at owntheclimb.com`,
+      error: `Failed to fetch train data: ${errMsg}`,
       isLive: false,
     };
   }
@@ -427,12 +381,12 @@ export interface StationInfo {
   line: string;
 }
 
-export async function getStationInfo(): Promise<StationInfo | null> {
+export async function getStationInfo(): Promise<StationInfo> {
   return {
-    id: "MVW",
+    id: "62",
     name: "Mount Vernon West",
-    lat: 40.9130,
-    lon: -73.8502,
+    lat: 40.912142,
+    lon: -73.851129,
     line: "Harlem Line",
   };
 }

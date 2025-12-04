@@ -16,34 +16,32 @@ export default function Clock() {
 
   if (!time) {
     return (
-      <div className="clock-time text-5xl font-semibold">
-        --:--
+      <div className="text-right">
+        <div className="clock-time">--:--</div>
       </div>
     );
   }
 
   const hours = time.getHours();
   const minutes = time.getMinutes().toString().padStart(2, "0");
-  const seconds = time.getSeconds().toString().padStart(2, "0");
   const ampm = hours >= 12 ? "PM" : "AM";
   const hour12 = hours % 12 || 12;
 
   const dateStr = time.toLocaleDateString("en-US", {
-    weekday: "short",
+    weekday: "long",
     month: "short",
     day: "numeric",
   });
 
   return (
     <div className="text-right">
-      <div className="flex items-baseline gap-1.5">
-        <span className="clock-time text-5xl font-semibold tracking-tight">
+      <div className="flex items-baseline gap-1">
+        <span className="clock-time">
           {hour12}:{minutes}
         </span>
-        <span className="text-lg text-slate-400 font-mono font-medium">{seconds}</span>
-        <span className="text-lg font-semibold text-teal-400 ml-1">{ampm}</span>
+        <span className="text-lg font-semibold text-[var(--color-primary)]">{ampm}</span>
       </div>
-      <div className="text-base text-slate-400 font-medium mt-1">
+      <div className="clock-date">
         {dateStr}
       </div>
     </div>

@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
-import { DM_Sans, JetBrains_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 // Load fonts using next/font for optimal performance
-const dmSans = DM_Sans({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-dm-sans",
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -15,17 +15,15 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-import type { Viewport } from "next";
-
 export const metadata: Metadata = {
-  title: "22 Southwest Transit Display",
+  title: "22 Southwest Street • Transit Display",
   description: "Real-time transit information for Mount Vernon West",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#05080d",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
@@ -34,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${jetbrainsMono.variable}`}>
-      <body className="antialiased font-sans">{children}</body>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

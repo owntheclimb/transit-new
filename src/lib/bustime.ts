@@ -171,7 +171,7 @@ export async function getBeeLineRealtime(): Promise<BusApiResponse> {
     if (!response.ok) {
       return {
         arrivals: [],
-        error: `Bee-Line API error ${response.status}. Contact Alex at owntheclimb.com`,
+        error: `Bee-Line API returned status ${response.status}.`,
         isLive: false,
       };
     }
@@ -252,7 +252,7 @@ export async function getBeeLineRealtime(): Promise<BusApiResponse> {
     if (error instanceof Error && error.name === "AbortError") {
       return {
         arrivals: [],
-        error: "Bee-Line API timeout. Contact Alex at owntheclimb.com",
+        error: "Bee-Line API request timed out.",
         isLive: false,
       };
     }
@@ -260,7 +260,7 @@ export async function getBeeLineRealtime(): Promise<BusApiResponse> {
     const errMsg = error instanceof Error ? error.message : "Unknown error";
     return {
       arrivals: [],
-      error: `Connection failed: ${errMsg}. Contact Alex at owntheclimb.com`,
+      error: `Failed to fetch bus data: ${errMsg}`,
       isLive: false,
     };
   }
