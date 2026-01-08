@@ -3,6 +3,7 @@ import TrainBoard from "@/components/TrainBoard";
 import BusBoard from "@/components/BusBoard";
 import NoticesPanel from "@/components/NoticesPanel";
 import WeatherWidget from "@/components/WeatherWidget";
+import FullscreenButton from "@/components/FullscreenButton";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,8 @@ export default function TransitDisplay() {
         </div>
         <div className="flex items-center gap-2">
           <span>Live data • Auto-refresh 60s</span>
+          <span className="text-[var(--color-border)]">|</span>
+          <FullscreenButton />
           <span className="text-[var(--color-border)]">|</span>
           <a href="/admin" className="text-[var(--color-accent-blue)] hover:underline font-medium">
             Admin
